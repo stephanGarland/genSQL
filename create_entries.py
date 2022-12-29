@@ -1,24 +1,9 @@
 import argparse
-from collections import deque
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, wait
 from random import random
 
-
-class Allocate:
-    def __init__(self, id_max: int):
-        self.id_max = [x for x in range(1, id_max)]
-        self.ids = deque(self.id_max)
-
-    def allocate(self):
-        try:
-            return self.ids.popleft()
-        except IndexError:
-            return None
-
-
 class Runner:
     def __init__(self):
-        self.allocate = Allocate(10**6)
         with open("names.txt", "r") as f:
             self.names = f.read().splitlines()
 
@@ -48,23 +33,24 @@ class Runner:
         )
 
         return parser.parse_args()
-
-    # https://stackoverflow.com/a/42532968/4221094
+ 
     def sample(self, iterable, n):
         reservoir = []
-        for t, item in enumerate(iterable):
-            if t < n:
-                reservoir.append(item)
-            else:
-                m = int(t * random())
-                if m < n:
-                    reservoir[m] = item
-        return reservoir
+        for i in iterable:
+            reservoir.append(i)
+        
+        reservoir_len = len(reservoir)
+        
+        for idx, item in enumerate(iterable):
+            j = int(random() * reservoir_len)
+            reservoir[j] = item
+        return reservoir[:n]
 
     def make_row(self, rows: list):
-        rows.append(
-            f"{','.join(self.sample(self.names, 2))},{self.allocate.allocate()}\n"
-        )
+        for i in range(1, args.num):
+            rows.append(
+                f"{','.join(self.sample(self.names, 2))},{i}\n"
+            )
 
     def run(self, args):
         rows = []
@@ -81,8 +67,7 @@ class Runner:
                 ]
                 wait(futures)
         else:
-            for i in range(args.num):
-                self.make_row(rows)
+            self.make_row(rows)
         with open("rows.txt", "w+") as f:
             f.writelines(rows)
 
