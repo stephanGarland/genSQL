@@ -1,19 +1,22 @@
 import argparse
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, wait
-from random import random
+from math import floor
+from multiprocessing import Value
+from os import urandom
+import random
+
 
 class Runner:
     def __init__(self):
-        with open("names.txt", "r") as f:
-            self.names = f.read().splitlines()
+        with open("first_names.txt", "r") as f:
+            self.first_names = f.read().splitlines()
+        with open("last_names.txt", "r") as f:
+            self.last_names = f.read().splitlines()
 
-    def args(self):
+    def args(self) -> argparse.Namespace:
         parser = argparse.ArgumentParser()
         parser.add_argument(
-            "-m",
-            "--multi",
-            action="store_true",
-            help="Enable multiprocessing"
+            "-m", "--multi", action="store_true", help="Enable multiprocessing"
         )
         parser.add_argument(
             "-n", "--num", type=int, default=1000, help="The number of rows to generate"
@@ -33,38 +36,35 @@ class Runner:
         )
 
         return parser.parse_args()
- 
-    def sample(self, iterable, n):
-        reservoir = []
-        for i in iterable:
-            reservoir.append(i)
-        
-        reservoir_len = len(reservoir)
-        
-        for idx, item in enumerate(iterable):
-            j = int(random() * reservoir_len)
-            reservoir[j] = item
-        return reservoir[:n]
 
-    def make_row(self, rows: list):
+    def sample(self, iterable: list, num_rows: int) -> str:
+        idx = floor(random.random() * num_rows)
+        return iterable[idx]
+
+    def make_row(self, rows: list, idx: Value = None):
+        num_rows_first_names = len(self.first_names)
+        num_rows_last_names = len(self.last_names)
         for i in range(1, args.num):
-            rows.append(
-                f"{','.join(self.sample(self.names, 2))},{i}\n"
-            )
+            random_first = self.sample(self.first_names, num_rows_first_names)
+            random_last = self.sample(self.last_names, num_rows_last_names)
+            if args.threading or args.multi:
+                rows.append(f"{random_first},{random_last},{idx.value}\n")
+                with idx.get_lock():
+                    idx.value += 1
+            else:
+                rows.append(f"{random_first},{random_last},{i}\n")
 
-    def run(self, args):
+    def run(self, args: argparse.Namespace):
         rows = []
+        idx = Value("i", 1)
+        random.seed(urandom(4))
         if args.threading:
             with ThreadPoolExecutor(max_workers=args.workers) as executor:
-                futures = [
-                    executor.submit(self.make_row(rows), i) for i in range(args.num)
-                ]
+                futures = [executor.submit(self.make_row(rows, idx))]
                 wait(futures)
         elif args.multi:
             with ProcessPoolExecutor(max_workers=args.workers) as executor:
-                futures = [
-                    executor.submit(self.make_row(rows), i) for i in range(args.num)
-                ]
+                futures = [executor.submit(self.make_row(rows, idx))]
                 wait(futures)
         else:
             self.make_row(rows)
