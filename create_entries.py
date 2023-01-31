@@ -9,16 +9,13 @@ from textwrap import dedent
 
 from utilities import utilities
 
-SECONDS_IN_DAY = 86400
-
-
 class Generator:
     def __init__(self):
         self.utils = utilities.Utilities()
         self.start_date = datetime(1995, 5, 23)
         self.end_date = datetime.now()
 
-    def parse_schema(self, schema: dict) -> dict[str, str]:
+    def parse_schema(self) -> dict[str, str]:
         """
         Parses input schema in JSON format and returns
         a dictionary of the required columns and their types.
@@ -27,12 +24,68 @@ class Generator:
         column names or types are valid.
         """
 
-        with open(args.input, "r") as f:
-            try:
-                schema = json.loads(f.read())
-            except JSONDecodeError as e:
-                raise SchemaError(f"Error decoding schema\n{e}")
+        try:
+            filename = args.input or "skeleton.json"
+            with open(filename, "r") as f:
+                try:
+                    schema = json.loads(f.read())
+                except JSONDecodeError as e:
+                    raise SystemExit(f"Error decoding schema\n{e}")
+        except OSError as e:
+            raise SystemExit(f"input schema {args.input} not found - generate one with the -g arg\n{e}")
         return schema
+
+    def validate_schema(self, schema: dict):
+        allowed_cols = [
+            "smallint",
+            "smallint unsigned",
+            "int",
+            "int unsigned",
+            "bigint",
+            "bigint unsigned",
+            "decimal",
+            "double",
+            "char",
+            "varchar",
+            "timestamp",
+            "text",
+            "json"
+        ]
+        pks = []
+        for k, v in schema.items():
+            col_type = v.get("type")
+            col_width = v.get("width")
+            col_nullable = self.utils.strtobool(v.get("nullable"))
+            col_autoinc = self.utils.strtobool(v.get("auto increment"))
+            col_default = v.get("default")
+            col_invisible = self.utils.strtobool(v.get("invisible"))
+            col_pk = self.utils.strtobool(v.get("primary key"))
+            col_unique = self.utils.strtobool(v.get("unique"))
+            if col_pk:
+                pks.append(k)
+            if not col_type:
+                raise SyntaxError(f"{k} is missing a type property")
+            if not col_nullable:
+                raise SyntaxError(f"{k} is missing a nullable property")
+            if col_type not in allowed_cols:
+                raise SyntaxError(f"{k}.{col_type} is not supported")
+            if col_width and "char" not in col_type:
+                raise SyntaxError(f"width is not a valid option for type {col_type}")
+            if col_autoinc and "int" not in col_type:
+                raise SyntaxError(f"auto increment is not a valid option for type {col_type}")
+            if col_nullable and col_pk:
+                raise SyntaxError(f"{k} is designated as a primary key and cannot be nullable")
+
+            try:
+                if col_type == "char" and 0 < int(col_width) < 2**8 :
+                    raise SyntaxError(f"type {col_type} width must be in the range 0-{2**8 - 1}")
+                if col_type == "varchar" and 0 < int(col_width) < 2**16:
+                    raise SyntaxError(f"type {col_type} widh must be in the range 0-{2**16 - 1}")
+            except ValueError:
+                raise SyntaxError(f"{col_width} must be an integer")
+
+        if len(pks) > 1:
+            raise SyntaxError(f"cannot specify more than one primary key; got {[x for x in pks]}")
 
     def make_dates(self, num: int) -> list:
         """
@@ -57,16 +110,18 @@ class Generator:
         return dates
 
     def mysql(
-        self, schema: dict[str, str], tbl_name: str
+        self, schema: dict[str, str], tbl_name: str, drop_table: bool = False
     ) -> tuple[str, dict[str, str]]:
         auto_inc_exists = False
+        msg = ""
         pk = None
         recursive_dict = lambda: defaultdict(recursive_dict)
         cols = recursive_dict()
         col_defs = {}
         uniques = []
 
-        msg = f"DROP TABLE IF EXISTS `{tbl_name}`;\n"
+        if drop_table:
+            msg += f"DROP TABLE IF EXISTS `{tbl_name}`;\n"
         msg += f"CREATE TABLE `{tbl_name}` (\n"
         for col, col_attributes in schema.items():
             col_opts = []
@@ -77,7 +132,7 @@ class Generator:
                     case "auto increment":
                         cols[col]["auto_inc"] = self.utils.strtobool(v)
                     case "default":
-                        if not v.lower() in ("null", "nul"):
+                        if not "nul" in v.lower():
                             cols[col]["default"] = v
                     case "invisible":
                         cols[col]["invisible"] = self.utils.strtobool(v)
@@ -93,15 +148,15 @@ class Generator:
                     case _:
                         raise ValueError(f"column attribute {k} is invalid")
             if cols[col]["width"]:
-                if not cols[col]["type"] in ("char", "varchar"):
-                    raise ValueError(
-                        f"width `{cols[col]['width']}` incorrectly specified for column `{col}` of type `{cols[col]['type']}`"
-                    )
+                #if not cols[col]["type"] in ("char", "varchar"):
+                #    raise ValueError(
+                #        f"width `{cols[col]['width']}` incorrectly specified for column `{col}` of type `{cols[col]['type']}`"
+                    #)
                 cols[col]["type"] = f"{cols[col]['type']} ({cols[col]['width']})"
             if cols.get(col, {}).get("nullable"):
-                col_opts.append("DEFAULT NULL")
-            else:
                 col_opts.append("NOT NULL")
+            else:
+                col_opts.append("NULL")
             if cols.get(col, {}).get("default"):
                 col_opts.append(f"DEFAULT {cols[col]['default'].upper()}")
             if cols.get(col, {}).get("invisible"):
@@ -158,10 +213,9 @@ class Runner:
 
     def make_row(self, schema: dict) -> list:
         row = {}
-
         if any("timestamp" in s.values() for s in schema.values()):
             date = self.sample(self.dates, self.args.num)
-        for i, (col, opts) in enumerate(schema.items(), 1):
+        for col, opts in schema.items():
             if "id" in col.lower():
                 if schema.get(col, {}).get("auto increment"):
                     row[col] = self.monotonic_id.allocate()
@@ -170,8 +224,8 @@ class Runner:
                 else:
                     row[col] = self.random_id.allocate()
                     # Return an id for allocation 5% of the time
-                    if not i % 20:
-                        self.random_id.release(row[col])
+                    #if not i % 20:
+                    #    self.random_id.release(row[col])
 
             elif "name" in col.lower():
                 random_first = self.sample(self.first_names, self.num_rows_first_names)
@@ -215,20 +269,28 @@ if __name__ == "__main__":
         help.schema()
     elif args.generate:
         skeleton = help.make_skeleton()
-        with open(f"{args.table}.json", "w") as f:
-            f.write(skeleton)
-        raise SystemExit(0)
+        try:
+            filename = args.output or "skeleton.json"
+            with open(f"{filename}", f"{'w' if args.force else 'x'}") as f:
+                f.write(skeleton)
+            raise SystemExit(0)
+        except FileExistsError as e:
+            raise SystemExit(f"{filename} exists")
+        except PermissionError as e:
+            raise SystemExit(f"unable to write {filename}\n{e}")
     elif args.dates:
-        with open(f"dates.txt", "w") as f:
-            f.writelines(g.make_dates(args.num))
-        raise SystemExit(0)
-    try:
-        with open(f"{args.input}", "r") as f:
-            tbl_name = args.table
-            schema_dict = g.parse_schema(json.loads(f.read()))
-            tbl_create, tbl_cols = g.mysql(schema_dict, tbl_name)
-    except OSError:
-        print("FATAL: Input schema not found - generate one with the -g arg")
-        raise SystemExit(1)
+        try:
+            filename = args.output or "dates.txt"
+            with open(f"{filename}", f"{'w' if args.force else 'x'}") as f:
+                dates = [x + "\n" for x in g.make_dates(args.num)]
+                f.writelines(dates)
+            raise SystemExit(0)
+        except FileExistsError as e:
+            raise SystemExit(f"--force not set, refusing to overwrite {filename}\n{e}")
+        except PermissionError as e:
+            raise SystemExit(f"unable to write {filename}\n{e}")
+    tbl_name = args.table
+    schema_dict = g.parse_schema()
+    tbl_create, tbl_cols = g.mysql(schema_dict, tbl_name, args.drop_table)
     r = Runner(args, schema_dict, tbl_cols, tbl_create)
     r.run()

@@ -46,6 +46,17 @@ class Args:
             help="Generate a file of datetimes for later use",
         )
         parser.add_argument(
+            "--drop-table",
+            action="store_true",
+            dest="drop_table",
+            help="WARNING: DESTRUCTIVE - use DROP TABLE with generation"
+        )
+        parser.add_argument(
+            "--force",
+            action="store_true",
+            help="WARNING: DESTRUCTIVE - overwrite any files"
+        )
+        parser.add_argument(
             "-f",
             "--filetype",
             choices=["csv", "mysql", "postgres", "sqlserver", "txt"],
@@ -59,14 +70,14 @@ class Args:
             help="Generate a skeleton input JSON schema",
         )
         parser.add_argument(
-            "-i", "--input", default="skeleton.json", help="Input schema (JSON) to generate data for"
+            "-i", "--input", help="Input schema (JSON) to generate data for"
         )
         parser.add_argument(
             "-n", "--num", type=int, default=1000, help="The number of rows to generate"
         )
-        parser.add_argument("-o", "--output", default="test.sql", help="Output filename")
-        parser.add_argument("-t", "--table", default="skeleton", help="Table name to generate SQL for")
-
+        parser.add_argument("-o", "--output", help="Output filename")
+        parser.add_argument("-t", "--table", help="Table name to generate SQL for")
+        parser.add_argument("--validate", action="store_true", help="Validate an input JSON schema")
         return parser.parse_args()
 
 class Help:
@@ -79,7 +90,7 @@ class Help:
                 "user_id": {
                     "type": "bigint unsigned",
                     "nullable": "false",
-                    "auto increment": "true",
+                    "autoincrement": "true",
                     "primary key": "true"
                 },
                 "name": {
@@ -113,7 +124,7 @@ class Help:
                 }}
             }}
 
-        The filename will be used as the table name.
+        By default, the filename is used as the table name.
 
         Valid column types <sizes> are:
             * smallint [unsigned]
@@ -132,13 +143,13 @@ class Help:
 
         Valid column options are:
             * [var]char
-                * length
+                * width
             * integers
-                * autoincrement
+                * auto increment
             * all
                 * default
                 * invisible - NOTE: Only valid for MySQL
-                * nullable
+                * nullable - NOTE: absence implies true
                 * primary key
                 * unique
         e.g.
