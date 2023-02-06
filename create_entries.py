@@ -46,6 +46,29 @@ class Generator:
         return schema
 
     def validate_schema(self, schema: dict) -> bool:
+        """
+        Validates that a JSON schema can be parsed for use by GenSQL.
+        If the schema is invalid, the error and its location in the file will
+        be added to the error_schema dict with _add_error(), to then be raised
+        to SchemaValidationError at the end.
+        """
+
+        def _add_error(
+            error_schema: dict, key: tuple, value: dict, error_message: str
+        ) -> bool:
+            """
+            Adds errors to the error_schema dict. Expects a tuple of two elements
+            as the key, of the format (`column_name`, `column_option_key`), as well
+            as the specific error message to be appended to the invalid schema.
+            """
+            try:
+                error_schema[key] = v
+                error_schema[key]["error"] = error_message
+            except KeyError as e:
+                print(e)
+                return False
+            return True
+
         allowed_cols = [
             "smallint",
             "smallint unsigned",
@@ -76,48 +99,84 @@ class Generator:
             if col_pk:
                 pks.append(k)
             if not col_type:
-                raise SchemaValidationError(f"column `{k}` is missing a type property")
+                if not _add_error(
+                    errors,
+                    (k, "type"),
+                    v,
+                    f"column `{k}` is missing a type property",
+                ):
+                    raise SystemExit("unable to validate schema")
             if col_type not in allowed_cols:
-                errors[(k, "type", col_type)] = v
-                errors[(k, col_type)] = f"column type `{col_type}` is not supported"
-                #raise SchemaValidationError(
-                #    f"column type `{col_type}` is not supported"
-                #)
+                if not _add_error(
+                    errors,
+                    (k, "type"),
+                    v,
+                    f"column type `{col_type}` is not supported",
+                ):
+                    raise SystemExit("unable to validate schema")
             if col_width and "char" not in col_type:
-                errors[(k, "type", col_type)] = v
-                errors[(k, col_width)] = f"width is not a valid option for column `{k}` of type `{col_type}`"
-                #raise SchemaValidationError(
-                    #f"width is not a valid option for column `{k}` of type `{col_type}`"
-                #)
+                if not _add_error(
+                    errors,
+                    (k, "width"),
+                    v,
+                    f"column type `{col_type}` is not supported",
+                ):
+                    raise SystemExit("unable to validate schema")
             if col_autoinc and "int" not in col_type:
-                raise SchemaValidationError(
-                    f"auto increment is not a valid option for column `{k}` of type `{col_type}`"
-                )
+                if not _add_error(
+                    errors,
+                    (k, "auto increment"),
+                    v,
+                    f"auto increment is not a valid option for column `{k}` of type `{col_type}`",
+                ):
+                    raise SystemExit("unable to validate schema")
             if col_nullable and col_pk:
-                raise SchemaValidationError(
-                    f"column `{k}` is designated as a primary key and cannot be nullable"
-                )
-
+                if not _add_error(
+                    errors,
+                    (k, "nullable"),
+                    v,
+                    f"column `{k}` is designated as a primary key and cannot be nullable",
+                ):
+                    raise SystemExit("unable to validate schema")
             try:
                 if col_type == "char" and not 0 < int(col_width) < 2**8:
-                    raise SchemaValidationError(
-                        f"column `{k}` of type `{col_type}` width must be in the range 0-{2**8 - 1} (got {col_width})"
-                    )
+                    if not _add_error(
+                        errors,
+                        (k, "width"),
+                        v,
+                        f"column `{k}` of type `{col_type}` width must be in the range 0-{2**8 - 1} (got {col_width})",
+                    ):
+                        raise SystemExit("unable to validate schema")
                 if col_type == "varchar" and not 0 < int(col_width) < 2**16:
-                    raise SchemaValidationError(
-                        f"column `{k}` of type `{col_type}` width must be in the range 0-{2**16 - 1} (got {col_width})"
-                    )
+                    if not _add_error(
+                        errors,
+                        (k, "width"),
+                        v,
+                        f"column `{k}` of type `{col_type}` width must be in the range 0-{2**16 - 1} (got {col_width})",
+                    ):
+                        raise SystemExit("unable to validate schema")
             except ValueError:
-                raise SchemaValidationError(f"{col_width} must be an integer")
-
+                if not _add_error(
+                    errors,
+                    (k, "width"),
+                    v,
+                    f"{col_width} must be an integer",
+                ):
+                    raise SystemExit("unable to validate schema")
         if len(pks) > 1:
+            if not _add_error(
+                errors,
+                (k, "primary key"),
+                v,
+                f"cannot specify more than one primary key; got {[x for x in pks]}",
+            ):
+                raise SystemExit("unable to validate schema")
+        if len(errors) > len(schema):
             raise SchemaValidationError(
-                f"cannot specify more than one primary key; got {[x for x in pks]}"
+                errors, "found errors validating schema - see above"
             )
-        if errors:
-            raise SchemaValidationError(errors)
-
-        return True
+        else:
+            return True
 
     def make_dates(self, num: int) -> list:
         """

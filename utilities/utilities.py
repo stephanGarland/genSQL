@@ -73,19 +73,13 @@ class Args:
             dest="generate",
             help="Generate a skeleton input JSON schema",
         )
-        parser.add_argument(
-            "-i",
-            "--input",
-            help="Input schema (JSON)"
-        )
+        parser.add_argument("-i", "--input", help="Input schema (JSON)")
         parser.add_argument(
             "-n", "--num", type=int, default=1000, help="The number of rows to generate"
         )
         parser.add_argument("-o", "--output", help="Output filename")
         parser.add_argument("-t", "--table", help="Table name to generate SQL for")
-        parser.add_argument(
-            "--validate", help="Validate an input JSON schema"
-        )
+        parser.add_argument("--validate", help="Validate an input JSON schema")
         return parser.parse_args()
 
 
