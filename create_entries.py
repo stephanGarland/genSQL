@@ -2,12 +2,20 @@ from collections import defaultdict
 from datetime import datetime, timedelta
 import json
 from math import floor
-from os import urandom
+import os
+from pprint import pprint
 import random
-from sys import stderr
+from stat import filemode
+import sys
 from textwrap import dedent
 
+from exceptions.exceptions import (
+    OutputFilePermissionError,
+    OverwriteFileError,
+    SchemaValidationError,
+)
 from utilities import utilities
+
 
 class Generator:
     def __init__(self):
@@ -25,17 +33,19 @@ class Generator:
         """
 
         try:
-            filename = args.input or "skeleton.json"
+            filename = args.input or args.validate or "skeleton.json"
             with open(filename, "r") as f:
                 try:
                     schema = json.loads(f.read())
                 except JSONDecodeError as e:
                     raise SystemExit(f"Error decoding schema\n{e}")
         except OSError as e:
-            raise SystemExit(f"input schema {args.input} not found - generate one with the -g arg\n{e}")
+            raise SystemExit(
+                f"input schema {args.input} not found - generate one with the -g arg\n{e}"
+            )
         return schema
 
-    def validate_schema(self, schema: dict):
+    def validate_schema(self, schema: dict) -> bool:
         allowed_cols = [
             "smallint",
             "smallint unsigned",
@@ -49,9 +59,11 @@ class Generator:
             "varchar",
             "timestamp",
             "text",
-            "json"
+            "json",
         ]
         pks = []
+        errors = {}
+        errors["schema"] = schema
         for k, v in schema.items():
             col_type = v.get("type")
             col_width = v.get("width")
@@ -64,28 +76,48 @@ class Generator:
             if col_pk:
                 pks.append(k)
             if not col_type:
-                raise SyntaxError(f"{k} is missing a type property")
-            if not col_nullable:
-                raise SyntaxError(f"{k} is missing a nullable property")
+                raise SchemaValidationError(f"column `{k}` is missing a type property")
             if col_type not in allowed_cols:
-                raise SyntaxError(f"{k}.{col_type} is not supported")
+                errors[(k, "type", col_type)] = v
+                errors[(k, col_type)] = f"column type `{col_type}` is not supported"
+                #raise SchemaValidationError(
+                #    f"column type `{col_type}` is not supported"
+                #)
             if col_width and "char" not in col_type:
-                raise SyntaxError(f"width is not a valid option for type {col_type}")
+                errors[(k, "type", col_type)] = v
+                errors[(k, col_width)] = f"width is not a valid option for column `{k}` of type `{col_type}`"
+                #raise SchemaValidationError(
+                    #f"width is not a valid option for column `{k}` of type `{col_type}`"
+                #)
             if col_autoinc and "int" not in col_type:
-                raise SyntaxError(f"auto increment is not a valid option for type {col_type}")
+                raise SchemaValidationError(
+                    f"auto increment is not a valid option for column `{k}` of type `{col_type}`"
+                )
             if col_nullable and col_pk:
-                raise SyntaxError(f"{k} is designated as a primary key and cannot be nullable")
+                raise SchemaValidationError(
+                    f"column `{k}` is designated as a primary key and cannot be nullable"
+                )
 
             try:
-                if col_type == "char" and 0 < int(col_width) < 2**8 :
-                    raise SyntaxError(f"type {col_type} width must be in the range 0-{2**8 - 1}")
-                if col_type == "varchar" and 0 < int(col_width) < 2**16:
-                    raise SyntaxError(f"type {col_type} widh must be in the range 0-{2**16 - 1}")
+                if col_type == "char" and not 0 < int(col_width) < 2**8:
+                    raise SchemaValidationError(
+                        f"column `{k}` of type `{col_type}` width must be in the range 0-{2**8 - 1} (got {col_width})"
+                    )
+                if col_type == "varchar" and not 0 < int(col_width) < 2**16:
+                    raise SchemaValidationError(
+                        f"column `{k}` of type `{col_type}` width must be in the range 0-{2**16 - 1} (got {col_width})"
+                    )
             except ValueError:
-                raise SyntaxError(f"{col_width} must be an integer")
+                raise SchemaValidationError(f"{col_width} must be an integer")
 
         if len(pks) > 1:
-            raise SyntaxError(f"cannot specify more than one primary key; got {[x for x in pks]}")
+            raise SchemaValidationError(
+                f"cannot specify more than one primary key; got {[x for x in pks]}"
+            )
+        if errors:
+            raise SchemaValidationError(errors)
+
+        return True
 
     def make_dates(self, num: int) -> list:
         """
@@ -148,10 +180,10 @@ class Generator:
                     case _:
                         raise ValueError(f"column attribute {k} is invalid")
             if cols[col]["width"]:
-                #if not cols[col]["type"] in ("char", "varchar"):
+                # if not cols[col]["type"] in ("char", "varchar"):
                 #    raise ValueError(
                 #        f"width `{cols[col]['width']}` incorrectly specified for column `{col}` of type `{cols[col]['type']}`"
-                    #)
+                # )
                 cols[col]["type"] = f"{cols[col]['type']} ({cols[col]['width']})"
             if cols.get(col, {}).get("nullable"):
                 col_opts.append("NOT NULL")
@@ -224,7 +256,7 @@ class Runner:
                 else:
                     row[col] = self.random_id.allocate()
                     # Return an id for allocation 5% of the time
-                    #if not i % 20:
+                    # if not i % 20:
                     #    self.random_id.release(row[col])
 
             elif "name" in col.lower():
@@ -251,7 +283,7 @@ class Runner:
 
     def run(self):
         sql_inserts = []
-        random.seed(urandom(4))
+        random.seed(os.urandom(4))
         for _ in range(1, self.args.num + 1):
             sql_inserts.append(self.make_row(self.schema))
         vals = [",".join(str(v) for v in d.values()) for d in sql_inserts]
@@ -265,6 +297,8 @@ if __name__ == "__main__":
     help = utilities.Help()
     args = utilities.Args().make_args()
     g = Generator()
+    if not args.debug:
+        sys.tracebacklimit = 0
     if args.extended_help:
         help.schema()
     elif args.generate:
@@ -274,10 +308,13 @@ if __name__ == "__main__":
             with open(f"{filename}", f"{'w' if args.force else 'x'}") as f:
                 f.write(skeleton)
             raise SystemExit(0)
-        except FileExistsError as e:
-            raise SystemExit(f"{filename} exists")
-        except PermissionError as e:
-            raise SystemExit(f"unable to write {filename}\n{e}")
+        except FileExistsError:
+            raise OverwriteFileError(filename) from None
+        except PermissionError:
+            raise OutputFilePermissionError(filename) from None
+    elif args.validate:
+        g.validate_schema(g.parse_schema())
+        raise SystemExit
     elif args.dates:
         try:
             filename = args.output or "dates.txt"
@@ -285,10 +322,10 @@ if __name__ == "__main__":
                 dates = [x + "\n" for x in g.make_dates(args.num)]
                 f.writelines(dates)
             raise SystemExit(0)
-        except FileExistsError as e:
-            raise SystemExit(f"--force not set, refusing to overwrite {filename}\n{e}")
-        except PermissionError as e:
-            raise SystemExit(f"unable to write {filename}\n{e}")
+        except FileExistsError:
+            raise OverwriteFileError(filename) from None
+        except PermissionError:
+            raise OutputFilePermissionError(filename) from None
     tbl_name = args.table
     schema_dict = g.parse_schema()
     tbl_create, tbl_cols = g.mysql(schema_dict, tbl_name, args.drop_table)

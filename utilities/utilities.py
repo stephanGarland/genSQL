@@ -7,6 +7,7 @@ try:
 except ImportError:
     import random
 
+
 class Allocator:
     def __init__(self, id_max: int, shuffle: bool = False):
         if "numpy" in sys.modules:
@@ -26,6 +27,7 @@ class Allocator:
     def release(self, id: int):
         self.ids.appendleft(id)
 
+
 class Args:
     def __init__(self):
         pass
@@ -39,28 +41,30 @@ class Args:
             help="Print extended help",
         )
         parser.add_argument(
-            "-d",
-            "--generate-dates",
-            action="store_true",
-            dest="dates",
-            help="Generate a file of datetimes for later use",
+            "-d", "--debug", action="store_true", help="Print tracebacks for errors"
         )
         parser.add_argument(
             "--drop-table",
             action="store_true",
             dest="drop_table",
-            help="WARNING: DESTRUCTIVE - use DROP TABLE with generation"
+            help="WARNING: DESTRUCTIVE - use DROP TABLE with generation",
         )
         parser.add_argument(
             "--force",
             action="store_true",
-            help="WARNING: DESTRUCTIVE - overwrite any files"
+            help="WARNING: DESTRUCTIVE - overwrite any files",
         )
         parser.add_argument(
             "-f",
             "--filetype",
             choices=["csv", "mysql", "postgres", "sqlserver", "txt"],
             help="Filetype to generate",
+        )
+        parser.add_argument(
+            "--generate-dates",
+            action="store_true",
+            dest="dates",
+            help="Generate a file of datetimes for later use",
         )
         parser.add_argument(
             "-g",
@@ -70,15 +74,20 @@ class Args:
             help="Generate a skeleton input JSON schema",
         )
         parser.add_argument(
-            "-i", "--input", help="Input schema (JSON) to generate data for"
+            "-i",
+            "--input",
+            help="Input schema (JSON)"
         )
         parser.add_argument(
             "-n", "--num", type=int, default=1000, help="The number of rows to generate"
         )
         parser.add_argument("-o", "--output", help="Output filename")
         parser.add_argument("-t", "--table", help="Table name to generate SQL for")
-        parser.add_argument("--validate", action="store_true", help="Validate an input JSON schema")
+        parser.add_argument(
+            "--validate", help="Validate an input JSON schema"
+        )
         return parser.parse_args()
+
 
 class Help:
     def __init__(self):
@@ -158,14 +167,17 @@ class Help:
         print(dedent(msg))
         raise SystemExit(0)
 
+
 class Utilities:
-# Farewell, distutils
+    # Farewell, distutils
     def strtobool(self, val) -> bool:
         """Convert a string representation of truth to true (1) or false (0).
         True values are "y", "yes", "t", "true", "on", and "1"; false values
         are "n", "no", "f", "false", "off", and "0".  Raises ValueError if
         "val" is anything else.
         """
+        if val is None:
+            return False
         val = val.lower()
         if val in ("y", "yes", "t", "true", "on", "1"):
             return True
@@ -173,4 +185,3 @@ class Utilities:
             return False
         else:
             raise ValueError(f"invalid truth value {val}")
-
