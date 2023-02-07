@@ -182,7 +182,6 @@ class Generator:
         """
         Makes n datetimes in a given range.
         strftime is actually extremely slow; this is faster.
-        TODO: Fix invalid DST datetimes.
         """
         dates = []
         delta = self.end_date - self.start_date
@@ -239,15 +238,11 @@ class Generator:
                     case _:
                         raise ValueError(f"column attribute {k} is invalid")
             if cols[col]["width"]:
-                # if not cols[col]["type"] in ("char", "varchar"):
-                #    raise ValueError(
-                #        f"width `{cols[col]['width']}` incorrectly specified for column `{col}` of type `{cols[col]['type']}`"
-                # )
                 cols[col]["type"] = f"{cols[col]['type']} ({cols[col]['width']})"
             if cols.get(col, {}).get("nullable"):
-                col_opts.append("NOT NULL")
-            else:
                 col_opts.append("NULL")
+            else:
+                col_opts.append("NOT NULL")
             if cols.get(col, {}).get("default"):
                 col_opts.append(f"DEFAULT {cols[col]['default'].upper()}")
             if cols.get(col, {}).get("invisible"):
@@ -272,13 +267,13 @@ class Generator:
 
 
 class Runner:
-    def __init__(self, args, schema, tbl_cols, tbl_create):
+    def __init__(self, args, schema, tbl_name, tbl_cols, tbl_create):
         self.allocate = utilities.Allocator
         self.args = args
         self.schema = schema
         self.tbl_cols = tbl_cols
         self.tbl_create = tbl_create
-        self.tbl_name = self.args.table
+        self.tbl_name = tbl_name
         self.monotonic_id = self.allocate(self.args.num)
         self.random_id = self.allocate(self.args.num, shuffle=True)
         self.unique_id = self.allocate(self.args.num, shuffle=True)
@@ -331,6 +326,7 @@ class Runner:
 
     def make_sql_rows(self, vals: list) -> list:
         insert_rows = []
+        insert_rows.append("SET @@time_zone = '+00:00';\n")
         insert_rows.append(f"LOCK TABLES `{self.tbl_name}` WRITE;\n")
         for row in vals:
             insert_rows.append(
@@ -347,9 +343,15 @@ class Runner:
             sql_inserts.append(self.make_row(self.schema))
         vals = [",".join(str(v) for v in d.values()) for d in sql_inserts]
         lines = self.make_sql_rows(vals)
-        with open(args.output, "w") as f:
-            f.writelines(self.tbl_create)
-            f.writelines(lines)
+        filename = args.output or "test.sql"
+        try:
+            with open(filename, f"{'w' if args.force else 'x'}") as f:
+                f.writelines(self.tbl_create)
+                f.writelines(lines)
+        except FileExistsError:
+            raise OverwriteFileError(filename) from None
+        except PermissionError:
+            raise OutputFilePermissionError(filename) from None
 
 
 if __name__ == "__main__":
@@ -385,8 +387,8 @@ if __name__ == "__main__":
             raise OverwriteFileError(filename) from None
         except PermissionError:
             raise OutputFilePermissionError(filename) from None
-    tbl_name = args.table
+    tbl_name = args.table or "gensql"
     schema_dict = g.parse_schema()
     tbl_create, tbl_cols = g.mysql(schema_dict, tbl_name, args.drop_table)
-    r = Runner(args, schema_dict, tbl_cols, tbl_create)
+    r = Runner(args, schema_dict, tbl_name, tbl_cols, tbl_create)
     r.run()
