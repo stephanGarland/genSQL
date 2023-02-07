@@ -288,8 +288,7 @@ class Runner:
             with open("last_names.txt", "r") as f:
                 self.last_names = f.read().splitlines()
         except OSError:
-            print("FATAL: Unable to load names")
-            raise SystemExit(1)
+            raise SystemExit("unable to load names")
         self.num_rows_first_names = len(self.first_names)
         self.num_rows_last_names = len(self.last_names)
 
