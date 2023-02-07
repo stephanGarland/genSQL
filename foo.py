@@ -1,4 +1,5 @@
-#import numpy as np
+import ctypes
+import numpy as np
 from numpy.random import randint
 import random
 import sys
@@ -34,13 +35,24 @@ class Test:
         size = int(sys.argv[1])
         arr = [x for x in range(0, size)]
         random.shuffle(arr)
+class C:
+    def __init__(self):
+        lib = ctypes.CDLL("foo.so")
+        lib.shuf.argtypes = [ctypes.POINTER(ctypes.c_uint), ctypes.c_uint]
+        lib.fill_array(self.arr, len(self.arr))
+        print(self.arr)
+        self.arr_ptr = ctypes.byref(ctypes.c_uint32())
+        lib.shuf(self.arr_ptr, 25)
+        print(self.arr)
 
 if __name__ == "__main__":
-    size = int(sys.argv[1])
-    t = Test(size)
-    if sys.argv[2] == "np":
-        t.np_run()
-    elif sys.argv[2] == "c":
-        t.fast_run()
-    else:
-        t.run()
+    #size = int(sys.argv[1])
+    #t = Test(size)
+    c = C()
+    #if sys.argv[2] == "np":
+    #    t.np_run()
+    #elif sys.argv[2] == "c":
+    #    t.fast_run()
+    #else:
+    #    t.run()
+
