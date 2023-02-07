@@ -17,7 +17,11 @@ class Allocator:
             self.id_list = [x for x in range(1, id_max + 1)]
         self.ids = deque(self.id_list)
         if shuffle:
-            random.shuffle(self.ids)
+            if "numpy" in sys.modules:
+                g = random.default_rng()
+                g.shuffle(self.ids)
+            else:
+                random.shuffle(self.ids)
 
     def allocate(self) -> int | None:
         try:
