@@ -1,6 +1,7 @@
 import argparse
 from collections import deque
 import sys
+from textwrap import dedent
 
 try:
     from numpy import arange, random
@@ -88,12 +89,12 @@ class Help:
         pass
 
     def make_skeleton(self) -> str:
-        return """
+        msg = """
             {
                 "user_id": {
                     "type": "bigint unsigned",
                     "nullable": "false",
-                    "autoincrement": "true",
+                    "auto increment": "true",
                     "primary key": "true"
                 },
                 "name": {
@@ -114,6 +115,7 @@ class Help:
                 }
             }
         """
+        return dedent(msg)
 
     def schema(self):
         msg = f"""
