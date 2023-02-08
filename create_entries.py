@@ -37,7 +37,7 @@ class Generator:
             with open(filename, "r") as f:
                 try:
                     schema = json.loads(f.read())
-                except JSONDecodeError as e:
+                except json.JSONDecodeError as e:
                     raise SystemExit(f"Error decoding schema\n{e}")
         except OSError as e:
             raise SystemExit(
@@ -276,6 +276,8 @@ class Runner:
         self.tbl_name = tbl_name
         self.monotonic_id = self.allocate(self.args.num)
         self.random_id = self.allocate(self.args.num, shuffle=True)
+        # BUG: unique_id is missing one entry (e.g. 181) and gaining one (e.g. 1001)
+        # This is due to something within fast_shuffle.c and needs to be checked
         self.unique_id = self.allocate(self.args.num, shuffle=True)
         try:
             with open("dates.txt", "r") as f:
@@ -296,7 +298,7 @@ class Runner:
         idx = floor(random.random() * num_rows)
         return iterable[idx]
 
-    def make_row(self, schema: dict) -> list:
+    def make_row(self, schema: dict, idx: int) -> list:
         row = {}
         if any("timestamp" in s.values() for s in schema.values()):
             date = self.sample(self.dates, self.args.num)
@@ -308,9 +310,9 @@ class Runner:
                     row[col] = self.unique_id.allocate()
                 else:
                     row[col] = self.random_id.allocate()
-                    # Return an id for allocation 5% of the time
-                    # if not i % 20:
-                    #    self.random_id.release(row[col])
+                    # Return an id for allocation 2% of the time
+                    if idx % 100 < 2:
+                        self.random_id.release(row[col])
 
             elif "name" in col.lower():
                 random_first = self.sample(self.first_names, self.num_rows_first_names)
@@ -338,8 +340,8 @@ class Runner:
     def run(self):
         sql_inserts = []
         random.seed(os.urandom(4))
-        for _ in range(1, self.args.num + 1):
-            sql_inserts.append(self.make_row(self.schema))
+        for i in range(1, self.args.num + 1):
+            sql_inserts.append(self.make_row(self.schema, i))
         vals = [",".join(str(v) for v in d.values()) for d in sql_inserts]
         lines = self.make_sql_rows(vals)
         filename = args.output or "test.sql"
