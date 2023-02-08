@@ -8,11 +8,10 @@ from textwrap import dedent
 class Allocator:
     def __init__(self, id_max: int, shuffle: bool = False):
         self.id_max = id_max
-        self.lib = ctypes.CDLL("./fast_shuffle.so")
+        self.lib = ctypes.CDLL("./library/fast_shuffle.so")
         self.lib.fill_array.argtypes = [ctypes.c_uint32]
         self.lib.fill_array.restype = ctypes.POINTER(ctypes.c_uint32)
         self.lib.shuf.argtypes = [ctypes.POINTER(ctypes.c_uint), ctypes.c_uint]
-
         self.id_list_ptr = self.lib.fill_array(self.id_max + 1)
         if shuffle:
             self.lib.shuf(self.id_list_ptr, self.id_max + 1)
