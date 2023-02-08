@@ -1,27 +1,25 @@
 import argparse
 from collections import deque
+import ctypes
 import sys
 from textwrap import dedent
-
-try:
-    from numpy import arange, random
-except ImportError:
-    import random
 
 
 class Allocator:
     def __init__(self, id_max: int, shuffle: bool = False):
-        if "numpy" in sys.modules:
-            self.id_list = arange(1, id_max + 1)
-        else:
-            self.id_list = [x for x in range(1, id_max + 1)]
-        self.ids = deque(self.id_list)
+        self.id_max = id_max
+        self.lib = ctypes.CDLL("./fast_shuffle.so")
+        self.lib.fill_array.argtypes = [ctypes.c_uint32]
+        self.lib.fill_array.restype = ctypes.POINTER(ctypes.c_uint32)
+        self.lib.shuf.argtypes = [ctypes.POINTER(ctypes.c_uint), ctypes.c_uint]
+
+        self.id_list_ptr = self.lib.fill_array(self.id_max + 1)
         if shuffle:
-            if "numpy" in sys.modules:
-                g = random.default_rng()
-                g.shuffle(self.ids)
-            else:
-                random.shuffle(self.ids)
+            self.lib.shuf(self.id_list_ptr, self.id_max + 1)
+        self.id_list = (ctypes.c_uint32 * self.id_max).from_address(
+            ctypes.addressof(self.id_list_ptr.contents)
+        )
+        self.ids = deque(self.id_list)
 
     def allocate(self) -> int | None:
         try:
