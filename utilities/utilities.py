@@ -1,25 +1,27 @@
 import argparse
 from collections import deque
 import ctypes
+from os import urandom
+import random
 import sys
 from textwrap import dedent
 
-
 class Allocator:
     def __init__(self, id_max: int, shuffle: bool = False):
+        random.seed(urandom(8))
+        self.c_rand_seed = random.getrandbits(32)
         self.id_max = id_max
         self.lib = ctypes.CDLL("./library/fast_shuffle.so")
         self.lib.fill_array.argtypes = [ctypes.c_uint32]
         self.lib.fill_array.restype = ctypes.POINTER(ctypes.c_uint32)
-        self.lib.shuf.argtypes = [ctypes.POINTER(ctypes.c_uint), ctypes.c_uint]
-        self.id_list_ptr = self.lib.fill_array(self.id_max + 1)
+        self.lib.shuf.argtypes = [ctypes.POINTER(ctypes.c_uint32), ctypes.c_uint32, ctypes.c_uint32]
+        self.id_list_ptr = self.lib.fill_array(self.id_max)
         if shuffle:
-            self.lib.shuf(self.id_list_ptr, self.id_max + 1)
+            self.lib.shuf(self.id_list_ptr, self.id_max, self.c_rand_seed)
         self.id_list = (ctypes.c_uint32 * self.id_max).from_address(
             ctypes.addressof(self.id_list_ptr.contents)
         )
         self.ids = deque(self.id_list)
-
     def allocate(self) -> int | None:
         try:
             return self.ids.popleft()
@@ -98,7 +100,7 @@ class Help:
                     "auto increment": "true",
                     "primary key": "true"
                 },
-                "name": {
+                "full_name": {
                     "type": "varchar",
                     "width": "255",
                     "nullable": "false"
