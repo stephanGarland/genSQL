@@ -6,7 +6,7 @@
         "auto increment": "true",
         "primary key": "true"
     },
-    "name": {
+    "full_name": {
         "type": "varchar",
         "width": "255",
         "nullable": "false"

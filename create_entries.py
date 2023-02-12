@@ -276,23 +276,24 @@ class Runner:
         self.tbl_name = tbl_name
         self.monotonic_id = self.allocate(self.args.num)
         self.random_id = self.allocate(self.args.num, shuffle=True)
-        # BUG: unique_id is missing one entry (e.g. 181) and gaining one (e.g. 1001)
-        # This is due to something within fast_shuffle.c and needs to be checked
         self.unique_id = self.allocate(self.args.num, shuffle=True)
         try:
-            with open("dates.txt", "r") as f:
+            with open("content/dates.txt", "r") as f:
                 self.dates = f.readlines()
         except OSError:
             self.dates = Generator().make_dates(self.args.num)
         try:
-            with open("first_names.txt", "r") as f:
+            with open("content/first_names.txt", "r") as f:
                 self.first_names = f.read().splitlines()
-            with open("last_names.txt", "r") as f:
+            with open("content/last_names.txt", "r") as f:
                 self.last_names = f.read().splitlines()
+            with open("content/wordlist.txt", "r") as f:
+                self.wordlist = f.read().splitlines()
         except OSError:
-            raise SystemExit("unable to load names")
+            raise SystemExit("unable to load necessary content")
         self.num_rows_first_names = len(self.first_names)
         self.num_rows_last_names = len(self.last_names)
+        self.num_rows_wordlist = len(self.wordlist)
 
     def sample(self, iterable: list, num_rows: int) -> str:
         idx = floor(random.random() * num_rows)
@@ -314,11 +315,26 @@ class Runner:
                     if idx % 100 < 2:
                         self.random_id.release(row[col])
 
-            elif "name" in col.lower():
+            elif col.lower() == "first_name":
+                random_first = self.sample(self.first_names, self.num_rows_first_names)
+                row[col] = f"{random_first}".replace("'", "''")
+            elif col.lower() == "last_name":
+                random_last = self.sample(self.last_names, self.num_rows_last_names)
+                row[col] = f"{random_last}".replace("'", "''")
+            elif col.lower() == "full_name":
                 random_first = self.sample(self.first_names, self.num_rows_first_names)
                 random_last = self.sample(self.last_names, self.num_rows_last_names)
-                full_name = f"{random_last},{random_first}".replace("'", "''")
+                full_name = f"{random_last}, {random_first}".replace("'", "''")
                 row[col] = f"'{full_name}'"
+
+            elif schema[col]["type"] == "json":
+                json_dict = {}
+                # create an object of maximum depth 4
+                last_key = self.sample(self.wordlist, self.num_rows_wordlist)
+                for x in range(idx % 5):
+                    # this needs work; it just sets a new key to the last val
+                    random_val = self.sample(self.wordlist, self.num_rows_wordlist)
+                    last_key = json_dict.setdefault(last_key, random_val)
 
             elif schema[col]["type"] == "timestamp":
                 row[col] = date
@@ -379,7 +395,7 @@ if __name__ == "__main__":
         raise SystemExit
     elif args.dates:
         try:
-            filename = args.output or "dates.txt"
+            filename = args.output or "content/dates.txt"
             with open(f"{filename}", f"{'w' if args.force else 'x'}") as f:
                 dates = [x + "\n" for x in g.make_dates(args.num)]
                 f.writelines(dates)
