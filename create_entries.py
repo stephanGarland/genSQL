@@ -197,8 +197,6 @@ class Generator:
     def mysql(
         self, schema: dict[str, dict[str, str]], tbl_name: str, drop_table: bool = False
     ) -> tuple[str, dict[str, str]]:
-        def _create_default_inner_dict():
-            return defaultdict(dict)
 
         auto_inc_exists = False
         msg = ""
@@ -324,10 +322,12 @@ class Runner:
                 random_first = self.sample(self.first_names, self.num_rows_first_names)
                 first_name = f"{random_first}".replace("'", "''")
                 row[col] = f"'{first_name}'"
+
             elif col.lower() == "last_name":
                 random_last = self.sample(self.last_names, self.num_rows_last_names)
                 last_name = f"{random_last}".replace("'", "''")
                 row[col] = f"'{last_name}'"
+
             elif col.lower() == "full_name":
                 random_first = self.sample(self.first_names, self.num_rows_first_names)
                 random_last = self.sample(self.last_names, self.num_rows_last_names)
@@ -344,10 +344,12 @@ class Runner:
                     json_dict[key] = {}
                     json_dict[key][keys.pop()] = [vals.pop() for _ in range(4)]
                 row[col] = f"'{json.dumps(json_dict)}'"
+
             elif schema[col]["type"] == "text":
                 row[
                     col
                 ] = f"'{' '.join(self.sample(self.wordlist, self.num_rows_wordlist, 50))}'"
+
             elif schema[col]["type"] == "timestamp":
                 row[col] = date
 
