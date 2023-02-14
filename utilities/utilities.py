@@ -6,6 +6,7 @@ import random
 import sys
 from textwrap import dedent
 
+
 class Allocator:
     def __init__(self, id_max: int, shuffle: bool = False):
         random.seed(urandom(8))
@@ -14,7 +15,11 @@ class Allocator:
         self.lib = ctypes.CDLL("./library/fast_shuffle.so")
         self.lib.fill_array.argtypes = [ctypes.c_uint32]
         self.lib.fill_array.restype = ctypes.POINTER(ctypes.c_uint32)
-        self.lib.shuf.argtypes = [ctypes.POINTER(ctypes.c_uint32), ctypes.c_uint32, ctypes.c_uint32]
+        self.lib.shuf.argtypes = [
+            ctypes.POINTER(ctypes.c_uint32),
+            ctypes.c_uint32,
+            ctypes.c_uint32,
+        ]
         self.id_list_ptr = self.lib.fill_array(self.id_max)
         if shuffle:
             self.lib.shuf(self.id_list_ptr, self.id_max, self.c_rand_seed)
@@ -22,6 +27,7 @@ class Allocator:
             ctypes.addressof(self.id_list_ptr.contents)
         )
         self.ids = deque(self.id_list)
+
     def allocate(self) -> int | None:
         try:
             return self.ids.popleft()

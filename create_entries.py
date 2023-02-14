@@ -23,7 +23,7 @@ class Generator:
         self.start_date = datetime(1995, 5, 23)
         self.end_date = datetime.now()
 
-    def parse_schema(self) -> dict[str, str]:
+    def parse_schema(self) -> dict[str, dict[str, str]]:
         """
         Parses input schema in JSON format and returns
         a dictionary of the required columns and their types.
@@ -53,9 +53,7 @@ class Generator:
         to SchemaValidationError at the end.
         """
 
-        def _add_error(
-            error_schema: dict, key: tuple, value: dict, error_message: str
-        ):
+        def _add_error(error_schema: dict, key: tuple, value: dict, error_message: str):
             """
             Adds errors to the error_schema dict. Expects a tuple of two elements
             as the key, of the format (`column_name`, `column_option_key`), as well
@@ -189,12 +187,15 @@ class Generator:
         return dates
 
     def mysql(
-        self, schema: dict[str, str], tbl_name: str, drop_table: bool = False
+        self, schema: dict[str, dict[str, str]], tbl_name: str, drop_table: bool = False
     ) -> tuple[str, dict[str, str]]:
+        def _create_default_inner_dict():
+            return defaultdict(dict)
+
         auto_inc_exists = False
         msg = ""
         pk = None
-        recursive_dict = lambda: defaultdict(recursive_dict)
+        recursive_dict = lambda: defaultdict(recursive_dict) # type: ignore
         cols = recursive_dict()
         col_defs = {}
         uniques = []
@@ -288,7 +289,7 @@ class Runner:
         idx = floor(random.random() * num_rows)
         return iterable[idx]
 
-    def make_row(self, schema: dict, idx: int) -> list:
+    def make_row(self, schema: dict, idx: int) -> dict:
         row = {}
         if any("timestamp" in s.values() for s in schema.values()):
             date = self.sample(self.dates, self.args.num)
