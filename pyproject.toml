@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "gensql"
+version = "0.1.0"
+description = "A tool to generate valid and semantically readable anonymous data for various RDBMS"
+authors = ["Stephan Garland <stephan.marc.garland@gmail.com>"]
+license = "MPL-2.0"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+
+[tool.poetry.group.dev.dependencies]
+black = "^23.1.0"
+mypy = "^1.0.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

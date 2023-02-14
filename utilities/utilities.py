@@ -1,21 +1,35 @@
 import argparse
 from collections import deque
+import ctypes
+from os import urandom
+import random
 import sys
+from textwrap import dedent
 
-try:
-    from numpy import arange, random
-except ImportError:
-    import random
 
 class Allocator:
     def __init__(self, id_max: int, shuffle: bool = False):
-        if "numpy" in sys.modules:
-            self.id_list = arange(1, id_max + 1)
-        else:
-            self.id_list = [x for x in range(1, id_max + 1)]
-        self.ids = deque(self.id_list)
+        random.seed(urandom(8))
+        self.c_rand_seed = random.getrandbits(32)
+        self.id_max = id_max
+        try:
+            self.lib = ctypes.CDLL("./library/fast_shuffle.so")
+        except OSError as e:
+            raise SystemExit(f"FATAL: couldn't load C library - run make\n\n{e}") from None
+        self.lib.fill_array.argtypes = [ctypes.c_uint32]
+        self.lib.fill_array.restype = ctypes.POINTER(ctypes.c_uint32)
+        self.lib.shuf.argtypes = [
+            ctypes.POINTER(ctypes.c_uint32),
+            ctypes.c_uint32,
+            ctypes.c_uint32,
+        ]
+        self.id_list_ptr = self.lib.fill_array(self.id_max)
         if shuffle:
-            random.shuffle(self.ids)
+            self.lib.shuf(self.id_list_ptr, self.id_max, self.c_rand_seed)
+        self.id_list = (ctypes.c_uint32 * self.id_max).from_address(
+            ctypes.addressof(self.id_list_ptr.contents)
+        )
+        self.ids = deque(self.id_list)
 
     def allocate(self) -> int | None:
         try:
@@ -25,6 +39,7 @@ class Allocator:
 
     def release(self, id: int):
         self.ids.appendleft(id)
+
 
 class Args:
     def __init__(self):
@@ -39,11 +54,18 @@ class Args:
             help="Print extended help",
         )
         parser.add_argument(
-            "-d",
-            "--generate-dates",
+            "-d", "--debug", action="store_true", help="Print tracebacks for errors"
+        )
+        parser.add_argument(
+            "--drop-table",
             action="store_true",
-            dest="dates",
-            help="Generate a file of datetimes for later use",
+            dest="drop_table",
+            help="WARNING: DESTRUCTIVE - use DROP TABLE with generation",
+        )
+        parser.add_argument(
+            "--force",
+            action="store_true",
+            help="WARNING: DESTRUCTIVE - overwrite any files",
         )
         parser.add_argument(
             "-f",
@@ -52,29 +74,34 @@ class Args:
             help="Filetype to generate",
         )
         parser.add_argument(
+            "--generate-dates",
+            action="store_true",
+            dest="dates",
+            help="Generate a file of datetimes for later use",
+        )
+        parser.add_argument(
             "-g",
             "--generate-skeleton",
             action="store_true",
             dest="generate",
             help="Generate a skeleton input JSON schema",
         )
-        parser.add_argument(
-            "-i", "--input", default="skeleton.json", help="Input schema (JSON) to generate data for"
-        )
+        parser.add_argument("-i", "--input", help="Input schema (JSON)")
         parser.add_argument(
             "-n", "--num", type=int, default=1000, help="The number of rows to generate"
         )
-        parser.add_argument("-o", "--output", default="test.sql", help="Output filename")
-        parser.add_argument("-t", "--table", default="skeleton", help="Table name to generate SQL for")
-
+        parser.add_argument("-o", "--output", help="Output filename")
+        parser.add_argument("-t", "--table", help="Table name to generate SQL for")
+        parser.add_argument("--validate", help="Validate an input JSON schema")
         return parser.parse_args()
+
 
 class Help:
     def __init__(self):
         pass
 
     def make_skeleton(self) -> str:
-        return """
+        msg = """
             {
                 "user_id": {
                     "type": "bigint unsigned",
@@ -82,7 +109,7 @@ class Help:
                     "auto increment": "true",
                     "primary key": "true"
                 },
-                "name": {
+                "full_name": {
                     "type": "varchar",
                     "width": "255",
                     "nullable": "false"
@@ -100,6 +127,7 @@ class Help:
                 }
             }
         """
+        return dedent(msg)
 
     def schema(self):
         msg = f"""
@@ -113,7 +141,7 @@ class Help:
                 }}
             }}
 
-        The filename will be used as the table name.
+        By default, the filename is used as the table name.
 
         Valid column types <sizes> are:
             * smallint [unsigned]
@@ -132,13 +160,13 @@ class Help:
 
         Valid column options are:
             * [var]char
-                * length
+                * width
             * integers
-                * autoincrement
+                * auto increment
             * all
                 * default
                 * invisible - NOTE: Only valid for MySQL
-                * nullable
+                * nullable - NOTE: absence implies true
                 * primary key
                 * unique
         e.g.
@@ -147,14 +175,17 @@ class Help:
         print(dedent(msg))
         raise SystemExit(0)
 
+
 class Utilities:
-# Farewell, distutils
+    # Farewell, distutils
     def strtobool(self, val) -> bool:
         """Convert a string representation of truth to true (1) or false (0).
         True values are "y", "yes", "t", "true", "on", and "1"; false values
         are "n", "no", "f", "false", "off", and "0".  Raises ValueError if
         "val" is anything else.
         """
+        if val is None:
+            return False
         val = val.lower()
         if val in ("y", "yes", "t", "true", "on", "1"):
             return True
@@ -162,4 +193,3 @@ class Utilities:
             return False
         else:
             raise ValueError(f"invalid truth value {val}")
-
