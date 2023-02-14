@@ -1,0 +1,41 @@
+{
+    "user_id": {
+        "type": "bigint unsigned",
+        "nullable": "false",
+        "auto increment": "true",
+        "primary key": "true"
+    },
+    "first_name": {
+        "type": "varchar",
+        "width": "255",
+        "nullable": "false"
+    },
+    "last_name": {
+        "type": "varchar",
+        "width": "255",
+        "nullable": "false"
+    },
+    "external_id": {
+        "type": "bigint unsigned",
+        "nullable": "false",
+        "unique": "true",
+        "default": "0"
+    },
+    "tiny_id": {
+        "type": "smallint",
+        "nullable": "false"
+    },
+    "about_user": {
+        "type": "text",
+        "nullable": "true"
+    },
+    "user_json": {
+        "type": "json",
+        "nullable": "false"
+    },
+    "last_modified": {
+        "type": "timestamp",
+        "nullable": "true",
+        "default": "NULL"
+    }
+}
