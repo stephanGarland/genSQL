@@ -39,8 +39,8 @@ class Generator:
                     schema = json.loads(f.read())
                 except json.JSONDecodeError as e:
                     raise SystemExit(f"Error decoding schema\n{e}")
-        except OSError as e:
-            raise SystemExit(
+        except FileNotFoundError as e:
+            raise FileNotFoundError(
                 f"input schema {args.input} not found - generate one with the -g arg\n{e}"
             )
         return schema
@@ -55,7 +55,7 @@ class Generator:
 
         def _add_error(
             error_schema: dict, key: tuple, value: dict, error_message: str
-        ) -> bool:
+        ):
             """
             Adds errors to the error_schema dict. Expects a tuple of two elements
             as the key, of the format (`column_name`, `column_option_key`), as well
@@ -64,10 +64,8 @@ class Generator:
             try:
                 error_schema[key] = v
                 error_schema[key]["error"] = error_message
-            except KeyError as e:
-                print(e)
-                return False
-            return True
+            except KeyError:
+                raise
 
         allowed_cols = [
             "smallint",
@@ -99,78 +97,69 @@ class Generator:
             if col_pk:
                 pks.append(k)
             if not col_type:
-                if not _add_error(
+                _add_error(
                     errors,
                     (k, "type"),
                     v,
                     f"column `{k}` is missing a type property",
-                ):
-                    raise SystemExit("unable to validate schema")
+                )
             if col_type not in allowed_cols:
-                if not _add_error(
+                _add_error(
                     errors,
                     (k, "type"),
                     v,
                     f"column type `{col_type}` is not supported",
-                ):
-                    raise SystemExit("unable to validate schema")
+                )
             if col_width and "char" not in col_type:
-                if not _add_error(
+                _add_error(
                     errors,
                     (k, "width"),
                     v,
                     f"column type `{col_type}` is not supported",
-                ):
-                    raise SystemExit("unable to validate schema")
+                )
             if col_autoinc and "int" not in col_type:
-                if not _add_error(
+                _add_error(
                     errors,
                     (k, "auto increment"),
                     v,
                     f"auto increment is not a valid option for column `{k}` of type `{col_type}`",
-                ):
-                    raise SystemExit("unable to validate schema")
+                )
             if col_nullable and col_pk:
-                if not _add_error(
+                _add_error(
                     errors,
                     (k, "nullable"),
                     v,
                     f"column `{k}` is designated as a primary key and cannot be nullable",
-                ):
-                    raise SystemExit("unable to validate schema")
+                )
             try:
                 if col_type == "char" and not 0 < int(col_width) < 2**8:
-                    if not _add_error(
+                    _add_error(
                         errors,
                         (k, "width"),
                         v,
                         f"column `{k}` of type `{col_type}` width must be in the range 0-{2**8 - 1} (got {col_width})",
-                    ):
-                        raise SystemExit("unable to validate schema")
+                    )
                 if col_type == "varchar" and not 0 < int(col_width) < 2**16:
-                    if not _add_error(
+                    _add_error(
                         errors,
                         (k, "width"),
                         v,
                         f"column `{k}` of type `{col_type}` width must be in the range 0-{2**16 - 1} (got {col_width})",
-                    ):
-                        raise SystemExit("unable to validate schema")
+                    )
             except ValueError:
-                if not _add_error(
+                _add_error(
                     errors,
                     (k, "width"),
                     v,
                     f"{col_width} must be an integer",
-                ):
-                    raise SystemExit("unable to validate schema")
+                )
         if len(pks) > 1:
-            if not _add_error(
+            _add_error(
                 errors,
                 (k, "primary key"),
                 v,
                 f"cannot specify more than one primary key; got {[x for x in pks]}",
-            ):
-                raise SystemExit("unable to validate schema")
+            )
         if len(errors) > len(schema):
             raise SchemaValidationError(
                 errors, "found errors validating schema - see above"
@@ -280,7 +269,7 @@ class Runner:
         try:
             with open("content/dates.txt", "r") as f:
                 self.dates = f.readlines()
-        except OSError:
+        except FileNotFoundError:
             self.dates = Generator().make_dates(self.args.num)
         try:
             with open("content/first_names.txt", "r") as f:
@@ -289,8 +278,8 @@ class Runner:
                 self.last_names = f.read().splitlines()
             with open("content/wordlist.txt", "r") as f:
                 self.wordlist = f.read().splitlines()
-        except OSError:
-            raise SystemExit("unable to load necessary content")
+        except FileNotFoundError as e:
+            raise FileNotFoundError(f"unable to load necessary content\n{e}")
         self.num_rows_first_names = len(self.first_names)
         self.num_rows_last_names = len(self.last_names)
         self.num_rows_wordlist = len(self.wordlist)
@@ -391,8 +380,9 @@ if __name__ == "__main__":
         except PermissionError:
             raise OutputFilePermissionError(filename) from None
     elif args.validate:
-        g.validate_schema(g.parse_schema())
-        raise SystemExit
+        if g.validate_schema(g.parse_schema()):
+            print("INFO: validated schema, no errors detected")
+            raise SystemExit(0)
     elif args.dates:
         try:
             filename = args.output or "content/dates.txt"
