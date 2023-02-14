@@ -1,0 +1,8 @@
+wordlist.txt was taken from the EFF, here:
+https://www.eff.org/files/2016/07/18/eff_large_wordlist.txt
+which was a modification from Diceware, here:
+https://theworld.com/~reinhold/diceware.html
+
+I can't find any licensing requirement, but as a proper attribution,
+it was not created by me, only modified to remove the dice column.
+
