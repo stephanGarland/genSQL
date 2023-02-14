@@ -12,7 +12,10 @@ class Allocator:
         random.seed(urandom(8))
         self.c_rand_seed = random.getrandbits(32)
         self.id_max = id_max
-        self.lib = ctypes.CDLL("./library/fast_shuffle.so")
+        try:
+            self.lib = ctypes.CDLL("./library/fast_shuffle.so")
+        except OSError as e:
+            raise SystemExit(f"FATAL: couldn't load C library - run make\n\n{e}") from None
         self.lib.fill_array.argtypes = [ctypes.c_uint32]
         self.lib.fill_array.restype = ctypes.POINTER(ctypes.c_uint32)
         self.lib.shuf.argtypes = [
