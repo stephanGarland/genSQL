@@ -129,6 +129,13 @@ class Generator:
                     v,
                     f"column `{k}` is designated as a primary key and cannot be nullable",
                 )
+            if "text" in col_type and col_default:
+                _add_error(
+                    errors,
+                    (k, "default"),
+                    v,
+                    f"default is not a valid option for column `{k}` of type `{col_type}`",
+                )
             try:
                 if col_type == "char" and not 0 < int(col_width) < 2**8:
                     _add_error(
@@ -158,7 +165,8 @@ class Generator:
                 v,
                 f"cannot specify more than one primary key; got {[x for x in pks]}",
             )
-        if len(errors) > len(schema):
+        error_len = len([x.keys() for x in errors["schema"].values() if "error" in x])
+        if error_len:
             raise SchemaValidationError(
                 errors, "found errors validating schema - see above"
             )
@@ -314,10 +322,12 @@ class Runner:
 
             elif col.lower() == "first_name":
                 random_first = self.sample(self.first_names, self.num_rows_first_names)
-                row[col] = f"{random_first}".replace("'", "''")
+                first_name = f"{random_first}".replace("'", "''")
+                row[col] = f"'{first_name}'"
             elif col.lower() == "last_name":
                 random_last = self.sample(self.last_names, self.num_rows_last_names)
-                row[col] = f"{random_last}".replace("'", "''")
+                last_name = f"{random_last}".replace("'", "''")
+                row[col] = f"'{last_name}'"
             elif col.lower() == "full_name":
                 random_first = self.sample(self.first_names, self.num_rows_first_names)
                 random_last = self.sample(self.last_names, self.num_rows_last_names)
@@ -333,8 +343,11 @@ class Runner:
                     key = keys.pop()
                     json_dict[key] = {}
                     json_dict[key][keys.pop()] = [vals.pop() for _ in range(4)]
-
-                row[col] = json_dict
+                row[col] = f"'{json.dumps(json_dict)}'"
+            elif schema[col]["type"] == "text":
+                row[
+                    col
+                ] = f"'{' '.join(self.sample(self.wordlist, self.num_rows_wordlist, 50))}'"
             elif schema[col]["type"] == "timestamp":
                 row[col] = date
 
@@ -406,6 +419,7 @@ if __name__ == "__main__":
             raise OutputFilePermissionError(filename) from None
     tbl_name = args.table or "gensql"
     schema_dict = g.parse_schema()
+    g.validate_schema(schema_dict)
     tbl_create, tbl_cols = g.mysql(schema_dict, tbl_name, args.drop_table)
     r = Runner(args, schema_dict, tbl_name, tbl_cols, tbl_create)
     r.run()
