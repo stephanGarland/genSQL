@@ -195,7 +195,7 @@ class Generator:
         auto_inc_exists = False
         msg = ""
         pk = None
-        recursive_dict = lambda: defaultdict(recursive_dict) # type: ignore
+        recursive_dict = lambda: defaultdict(recursive_dict)  # type: ignore
         cols = recursive_dict()
         col_defs = {}
         uniques = []
@@ -285,9 +285,16 @@ class Runner:
         self.num_rows_last_names = len(self.last_names)
         self.num_rows_wordlist = len(self.wordlist)
 
-    def sample(self, iterable: list, num_rows: int) -> str:
-        idx = floor(random.random() * num_rows)
-        return iterable[idx]
+    def sample(
+        self, iterable: list, num_rows: int, num_samples: int = 1
+    ) -> list[str] | str:
+        sample_list = []
+        for i in range(num_samples):
+            idx = floor(random.random() * num_rows)
+            if num_samples == 1:
+                return iterable[idx]
+            sample_list.append(iterable[idx])
+        return sample_list
 
     def make_row(self, schema: dict, idx: int) -> dict:
         row = {}
@@ -319,13 +326,15 @@ class Runner:
 
             elif schema[col]["type"] == "json":
                 json_dict = {}
-                # create an object of maximum depth 4
-                last_key = self.sample(self.wordlist, self.num_rows_wordlist)
-                for x in range(idx % 5):
-                    # this needs work; it just sets a new key to the last val
-                    random_val = self.sample(self.wordlist, self.num_rows_wordlist)
-                    last_key = json_dict.setdefault(last_key, random_val)
+                keys = self.sample(self.wordlist, self.num_rows_wordlist, 3)
+                vals = self.sample(self.wordlist, self.num_rows_wordlist, 5)
+                json_dict[keys.pop()] = vals.pop()
+                if not idx % 5:
+                    key = keys.pop()
+                    json_dict[key] = {}
+                    json_dict[key][keys.pop()] = [vals.pop() for _ in range(4)]
 
+                row[col] = json_dict
             elif schema[col]["type"] == "timestamp":
                 row[col] = date
 
