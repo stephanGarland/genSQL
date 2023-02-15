@@ -51,7 +51,7 @@ GenSQL expects a JSON input schema, of the format:
 
 ## Requirements
 
-* A C compiler that's reasonably new, if the included options (`linux-x86_64` and `darwin-arm64`) don't work for you.
+* A C compiler that's reasonably new, if the included options (`linux-x86_64`, `darwin-arm64`, and `darwin-x86_64`) don't work for you.
 * Python >= 3.10, but 3.11 is recommended, as it's 15-20% faster for this application.
 
 ## Notes
@@ -63,7 +63,8 @@ GenSQL expects a JSON input schema, of the format:
 
 ### Loading data
 
-For MySQL, if you have access to the host (i.e. not DBaaS), by far the fastest method to load data is by using [LOAD DATA INFILE](https://dev.mysql.com/doc/refman/8.0/en/load-data.html). To do this, you first need to create the table. GenSQL generates a table definition separately from the data CSV, named `tbl_create.sql`. You can use the `mysql` client to create the table like so:
+For MySQL, if you have access to the host (i.e. not DBaaS), by far the fastest method to load data is by using [LOAD DATA INFILE](https://dev.mysql.com/doc/refman/8.0/en/load-data.html).
+To do this, you first need to create the table. GenSQL generates a table definition separately from the data CSV, named `tbl_create.sql`. You can use the `mysql` client to create the table like so:
 
 ```shell
 mysql -h $HOST -u $USER -p $SCHEMA < tbl_create.sql
@@ -103,6 +104,28 @@ python3 create_entries.py -n 1000000 --force --drop-table  5.27s user 0.17s syst
 
 ❯ time python3 create_entries.py -i full.json -n 1000000 --force --drop-table
 python3 create_entries.py -i full.json -n 1000000 --force --drop-table  16.23s user 0.54s system 99% cpu 16.840 total
+```
+
+### Intel i9  Macbook Pro
+
+#### Python 3.11
+
+```shell
+❯ time python3.11 create_entries.py -n 1000000 --force --drop-table
+python3.11 create_entries.py -n 1000000 --force --drop-table  8.51s user 0.47s system 99% cpu 9.023 total
+
+❯ time python3.11 create_entries.py -i full.json -n 1000000 --force --drop-table
+python3.11 create_entries.py -i full.json -n 1000000 --force --drop-table  25.68s user 1.60s system 99% cpu 27.395 total
+```
+
+#### Python 3.10
+
+```shell
+❯ time python3 create_entries.py -n 1000000 --force --drop-table
+python3 create_entries.py -n 1000000 --force --drop-table  9.88s user 0.46s system 99% cpu 10.405 total
+
+❯ time python3 create_entries.py -i full.json -n 1000000 --force --drop-table
+python3 create_entries.py -i full.json -n 1000000 --force --drop-table  32.60s user 1.66s system 99% cpu 34.364 total
 ```
 
 ### Xeon E5-2650v2 server
