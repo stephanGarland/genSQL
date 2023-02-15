@@ -7,8 +7,7 @@ Ever want to quickly create millions of rows of random data for a database, with
 ## Usage
 
 ```shell
-usage: create_entries.py [-h] [--extended-help] [-d] [--drop-table] [--force] [-f {csv,mysql,postgresql,sqlserver}] [--generate-dates] [-g] [-i INPUT] [-n NUM] [-o OUTPUT]
-                         [-t TABLE] [--validate VALIDATE]
+usage: create_entries.py [-h] [--extended-help] [-d] [--drop-table] [--force] [-f {csv,mysql,postgresql,sqlserver}] [--generate-dates] [-g] [-i INPUT] [-n NUM] [-o OUTPUT] [-r] [-t TABLE] [--validate VALIDATE]
 
 options:
   -h, --help            show this help message and exit
@@ -26,6 +25,7 @@ options:
   -n NUM, --num NUM     The number of rows to generate
   -o OUTPUT, --output OUTPUT
                         Output filename
+  -r, --random          Enable randomness on the length of some items
   -t TABLE, --table TABLE
                         Table name to generate SQL for
   --validate VALIDATE   Validate an input JSON schema
@@ -56,10 +56,11 @@ GenSQL expects a JSON input schema, of the format:
 
 ## Notes
 
-* The `-f` flag only supports `csv` and `mysql`. The only supported RDBMS is MySQL (probably 8.x; it _might_ work with 5.7.8 if you want a JSON column, and earlier if you don't).
+* The `--filetype` flag only supports `csv` and `mysql`. The only supported RDBMS is MySQL (probably 8.x; it _might_ work with 5.7.8 if you want a JSON column, and earlier if you don't).
 * Generated datetimes are in UTC, i.e. no DST events exist. If you remove the query to set the session's timezone, you may have a bad time.
 * This uses a C library to perform random shuffles. There are no external libraries, so as long as you have a reasonably new compiler, `make` should work for you.
-* `--force` and `--drop-table` have warnings for a reason.
+* `--force` and `--drop-table` have warnings for a reason. If you run a query with `DROP TABLE IF EXISTS`, please be sure of what you're doing.
+* `--random` allows for TEXT and JSON columns to have varying amounts of length, which may or may not matter to you. It will cause a ~10% slowdown. If not selected, a deterministic 20% of the rows in these columns will have a longer length than the rest. If this also bothers you, change DEFAULT_VARYING_LENGTH to `False`.
 
 ### Loading data
 
