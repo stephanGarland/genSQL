@@ -1,7 +1,7 @@
 from collections import defaultdict
 from datetime import datetime, timedelta
 import json
-from math import floor
+from math import ceil, floor
 import os
 from pprint import pprint
 import random
@@ -14,11 +14,14 @@ from exceptions.exceptions import (
     OverwriteFileError,
     SchemaValidationError,
 )
+
+from utilities.constants import DEFAULT_MAX_FIELD_PCT, DEFAULT_VARYING_LENGTH, JSON_OBJ_MAX_KEYS, JSON_OBJ_MAX_VALS, MYSQL_INT_MIN_MAX
 from utilities import utilities
 
 
 class Generator:
-    def __init__(self):
+    def __init__(self, args):
+        self.args = args
         self.utils = utilities.Utilities()
         self.start_date = datetime(1995, 5, 23)
         self.end_date = datetime.now()
@@ -90,8 +93,15 @@ class Generator:
             col_autoinc = self.utils.strtobool(v.get("auto increment"))
             col_default = v.get("default")
             col_invisible = self.utils.strtobool(v.get("invisible"))
+            col_max_length = v.get("max_length")
             col_pk = self.utils.strtobool(v.get("primary key"))
             col_unique = self.utils.strtobool(v.get("unique"))
+            if "int" in col_type:
+                if "unsigned" in col_type:
+                    col_min_val = 0
+                else:
+                    col_min_val = MYSQL_INT_MIN_MAX[f"MYSQL_MIN_{col_type.upper().split()[0]}_SIGNED"]
+                col_max_val = MYSQL_INT_MIN_MAX[f"MYSQL_MAX_{col_type.upper().split()[0]}_UNSIGNED"]
             if col_pk:
                 pks.append(k)
             if not col_type:
@@ -122,6 +132,20 @@ class Generator:
                     v,
                     f"auto increment is not a valid option for column `{k}` of type `{col_type}`",
                 )
+            if col_autoinc and args.num > col_max_val:
+                _add_error(
+                    errors,
+                    (k, "type"),
+                    v,
+                    f"column type `{col_type}` cannot hold the maximum value specified ({self.args.num})",
+                )
+            if col_max_length and col_type not in ["json", "text"]:
+                _add_error(
+                    errors,
+                    (k, "max_length"),
+                    v,
+                    f"max_length is not a valid option for column `{k}` of type `{col_type}`",
+                )
             if col_nullable and col_pk:
                 _add_error(
                     errors,
@@ -142,14 +166,14 @@ class Generator:
                         errors,
                         (k, "width"),
                         v,
-                        f"column `{k}` of type `{col_type}` width must be in the range 0-{2**8 - 1} (got {col_width})",
+                        f"column `{k}` of type `{col_type}` width must be in the range 1-{2**8 - 1} (got {col_width})",
                     )
                 if col_type == "varchar" and not 0 < int(col_width) < 2**16:
                     _add_error(
                         errors,
                         (k, "width"),
                         v,
-                        f"column `{k}` of type `{col_type}` width must be in the range 0-{2**16 - 1} (got {col_width})",
+                        f"column `{k}` of type `{col_type}` width must be in the range 1-{2**16 - 1} (got {col_width})",
                     )
             except ValueError:
                 _add_error(
@@ -157,6 +181,21 @@ class Generator:
                     (k, "width"),
                     v,
                     f"{col_width} must be an integer",
+                )
+            try:
+                if col_max_length and not 0 < float(col_max_length) <= 1:
+                    _add_error(
+                        errors,
+                        (k, "max_length"),
+                        v,
+                        f"column `{k}` of type `{col_type}` max_length must be in the range 0.01-1.00 (got {col_max_length})",
+                    )
+            except ValueError:
+                _add_error(
+                    errors,
+                    (k, "max_length"),
+                    v,
+                    f"{col_max_length} must be a float",
                 )
         if len(pks) > 1:
             _add_error(
@@ -222,6 +261,8 @@ class Generator:
                         cols[col]["invisible"] = self.utils.strtobool(v)
                     case "width":
                         cols[col]["width"] = v
+                    case "max_length":
+                        pass
                     case "nullable":
                         cols[col]["nullable"] = self.utils.strtobool(v)
                     case "primary key":
@@ -275,7 +316,7 @@ class Runner:
             with open("content/dates.txt", "r") as f:
                 self.dates = f.readlines()
         except FileNotFoundError:
-            self.dates = Generator().make_dates(self.args.num)
+            self.dates = Generator(self.args).make_dates(self.args.num)
         try:
             with open("content/first_names.txt", "r") as f:
                 self.first_names = f.read().splitlines()
@@ -283,10 +324,13 @@ class Runner:
                 self.last_names = f.read().splitlines()
             with open("content/wordlist.txt", "r") as f:
                 self.wordlist = f.read().splitlines()
+            with open("content/lorem_ipsum.txt", "r") as f:
+                self.lorem_ipsum = f.read().splitlines()
         except FileNotFoundError as e:
             raise FileNotFoundError(f"unable to load necessary content\n{e}")
         self.num_rows_first_names = len(self.first_names)
         self.num_rows_last_names = len(self.last_names)
+        self.num_rows_lorem_ipsum = len(self.lorem_ipsum)
         self.num_rows_wordlist = len(self.wordlist)
 
     def sample(
@@ -334,21 +378,41 @@ class Runner:
 
             elif schema[col]["type"] == "json":
                 json_dict = {}
-                keys = self.sample(self.wordlist, self.num_rows_wordlist, 3)
-                vals = self.sample(self.wordlist, self.num_rows_wordlist, 5)
+                keys = self.sample(self.wordlist, self.num_rows_wordlist, JSON_OBJ_MAX_KEYS)
+                vals = self.sample(self.wordlist, self.num_rows_wordlist, JSON_OBJ_MAX_VALS)
                 json_dict[keys.pop()] = vals.pop()
-                # make 20% of the JSON objects nested with a list object
+                max_rows_pct = float(schema.get(col, {}).get("max_length", DEFAULT_MAX_FIELD_PCT))
+                if self.args.random:
+                    json_arr_len = ceil(random.random() * (JSON_OBJ_MAX_VALS - 1) * max_rows_pct)
+                else:
+                    json_arr_len = ceil((JSON_OBJ_MAX_VALS - 1) * max_rows_pct)
+                # make 20% of the JSON objects nested with a list object of length
                 if not idx % 5:
                     key = keys.pop()
                     json_dict[key] = {}
-                    json_dict[key][keys.pop()] = [vals.pop() for _ in range(4)]
+                    json_dict[key][keys.pop()] = [vals.pop() for _ in range(json_arr_len)]
                 row[col] = f"'{json.dumps(json_dict)}'"
 
             elif schema[col]["type"] == "text":
-                # 50 random words
-                row[
-                    col
-                ] = f"'{' '.join(self.sample(self.wordlist, self.num_rows_wordlist, 50))}'"
+                max_rows_pct = float(schema.get(col, {}).get("max_length", DEFAULT_MAX_FIELD_PCT))
+                # e.g. if max_rows_pct is 0.15, with 25 rows in lorem ipsum, we get a range of 1-4 rows
+                if DEFAULT_VARYING_LENGTH:
+                    if self.args.random:
+                        lorem_rows = ceil(random.random() * self.num_rows_lorem_ipsum * max_rows_pct)
+                    # otherwise, default to a single row, but 20% of the time use the maximum allowed
+                    else:
+                        lorem_rows = 1
+                        if not idx % 5:
+                            lorem_rows = ceil(self.num_rows_lorem_ipsum * max_rows_pct)
+                else:
+                    lorem_rows = 1
+                if lorem_rows > 1:
+                    row[
+                        col
+                    ] = f"'{' '.join(self.sample(self.lorem_ipsum, self.num_rows_lorem_ipsum, lorem_rows))}'"
+                # sample() returns a string rather than a list if n=1, so skip that entirely and just use the first row of lorem
+                else:
+                    row[col] = f"'{self.lorem_ipsum[0]}'"
 
             elif schema[col]["type"] == "timestamp":
                 row[col] = date
@@ -410,7 +474,7 @@ if __name__ == "__main__":
     utils = utilities.Utilities()
     h = utilities.Help()
     args = utilities.Args().make_args()
-    g = Generator()
+    g = Generator(args)
     if not args.debug:
         sys.tracebacklimit = 0
     if args.extended_help:
