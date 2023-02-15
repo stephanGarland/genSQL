@@ -197,7 +197,6 @@ class Generator:
     def mysql(
         self, schema: dict[str, dict[str, str]], tbl_name: str, drop_table: bool = False
     ) -> tuple[str, dict[str, str]]:
-
         auto_inc_exists = False
         msg = ""
         pk = None
@@ -212,14 +211,13 @@ class Generator:
         for col, col_attributes in schema.items():
             col_opts = []
             for k, v in col_attributes.items():
-                match (k.lower()):
+                match k:
                     case "type":
                         cols[col]["type"] = v
                     case "auto increment":
                         cols[col]["auto_inc"] = self.utils.strtobool(v)
                     case "default":
-                        if not "nul" in v.lower():
-                            cols[col]["default"] = v
+                        cols[col]["default"] = v
                     case "invisible":
                         cols[col]["invisible"] = self.utils.strtobool(v)
                     case "width":
@@ -307,7 +305,7 @@ class Runner:
         if any("timestamp" in s.values() for s in schema.values()):
             date = self.sample(self.dates, self.args.num)
         for col, opts in schema.items():
-            if "id" in col.lower():
+            if "id" in col:
                 if schema.get(col, {}).get("auto increment"):
                     row[col] = self.monotonic_id.allocate()
                 elif schema.get(col, {}).get("unique"):
@@ -318,17 +316,17 @@ class Runner:
                     if idx % 100 < 2:
                         self.random_id.release(row[col])
 
-            elif col.lower() == "first_name":
+            elif col == "first_name":
                 random_first = self.sample(self.first_names, self.num_rows_first_names)
                 first_name = f"{random_first}".replace("'", "''")
                 row[col] = f"'{first_name}'"
 
-            elif col.lower() == "last_name":
+            elif col == "last_name":
                 random_last = self.sample(self.last_names, self.num_rows_last_names)
                 last_name = f"{random_last}".replace("'", "''")
                 row[col] = f"'{last_name}'"
 
-            elif col.lower() == "full_name":
+            elif col == "full_name":
                 random_first = self.sample(self.first_names, self.num_rows_first_names)
                 random_last = self.sample(self.last_names, self.num_rows_last_names)
                 full_name = f"{random_last}, {random_first}".replace("'", "''")
@@ -339,6 +337,7 @@ class Runner:
                 keys = self.sample(self.wordlist, self.num_rows_wordlist, 3)
                 vals = self.sample(self.wordlist, self.num_rows_wordlist, 5)
                 json_dict[keys.pop()] = vals.pop()
+                # make 20% of the JSON objects nested with a list object
                 if not idx % 5:
                     key = keys.pop()
                     json_dict[key] = {}
@@ -346,23 +345,33 @@ class Runner:
                 row[col] = f"'{json.dumps(json_dict)}'"
 
             elif schema[col]["type"] == "text":
+                # 50 random words
                 row[
                     col
                 ] = f"'{' '.join(self.sample(self.wordlist, self.num_rows_wordlist, 50))}'"
 
             elif schema[col]["type"] == "timestamp":
                 row[col] = date
-
         return row
+
+    def make_csv_rows(self, vals: list) -> list:
+        insert_rows = []
+        insert_rows.append(f"{','.join(self.tbl_cols)}\n")
+        for row in vals:
+            insert_rows.append(f"{row}\n")
+
+        return insert_rows
 
     def make_sql_rows(self, vals: list) -> list:
         insert_rows = []
         insert_rows.append("SET @@time_zone = '+00:00';\n")
+        insert_rows.append("SET autocommit=0;\n")
         insert_rows.append(f"LOCK TABLES `{self.tbl_name}` WRITE;\n")
         for row in vals:
             insert_rows.append(
                 f"INSERT INTO `{self.tbl_name}` (`{'`, `'.join(self.tbl_cols)}`) VALUES ({row});\n"
             )
+        insert_rows.append("COMMIT;\n")
         insert_rows.append(f"UNLOCK TABLES;\n")
 
         return insert_rows
@@ -371,13 +380,25 @@ class Runner:
         sql_inserts = []
         random.seed(os.urandom(4))
         for i in range(1, self.args.num + 1):
-            sql_inserts.append(self.make_row(self.schema, i))
+            row = self.make_row(self.schema, i)
+            sql_inserts.append(row)
         vals = [",".join(str(v) for v in d.values()) for d in sql_inserts]
-        lines = self.make_sql_rows(vals)
-        filename = args.output or "test.sql"
+        match args.filetype:
+            case "mysql":
+                lines = self.make_sql_rows(vals)
+                filename = args.output or "test.sql"
+            case "csv":
+                lines = self.make_csv_rows(vals)
+                filename = args.output or "test.csv"
+            case _:
+                raise ValueError(f"{args.filetype} is not a valid output format")
         try:
             with open(filename, f"{'w' if args.force else 'x'}") as f:
-                f.writelines(self.tbl_create)
+                if "sql" in args.filetype:
+                    f.writelines(self.tbl_create)
+                if args.filetype == "csv":
+                    with open("tbl_create.sql", f"{'w' if args.force else 'x'}") as ft:
+                        ft.writelines(self.tbl_create)
                 f.writelines(lines)
         except FileExistsError:
             raise OverwriteFileError(filename) from None
@@ -386,15 +407,16 @@ class Runner:
 
 
 if __name__ == "__main__":
-    help = utilities.Help()
+    utils = utilities.Utilities()
+    h = utilities.Help()
     args = utilities.Args().make_args()
     g = Generator()
     if not args.debug:
         sys.tracebacklimit = 0
     if args.extended_help:
-        help.schema()
+        h.schema()
     elif args.generate:
-        skeleton = help.make_skeleton()
+        skeleton = h.make_skeleton()
         try:
             filename = args.output or "skeleton.json"
             with open(f"{filename}", f"{'w' if args.force else 'x'}") as f:
@@ -421,6 +443,7 @@ if __name__ == "__main__":
             raise OutputFilePermissionError(filename) from None
     tbl_name = args.table or "gensql"
     schema_dict = g.parse_schema()
+    schema_dict = utils.lowercase_schema(schema_dict)
     g.validate_schema(schema_dict)
     tbl_create, tbl_cols = g.mysql(schema_dict, tbl_name, args.drop_table)
     r = Runner(args, schema_dict, tbl_name, tbl_cols, tbl_create)
