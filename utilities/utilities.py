@@ -41,7 +41,12 @@ class Allocator:
             return None
 
     def release(self, id: int):
-        self.ids.appendleft(id)
+        """
+        IDs are appended to the right so that it creates
+        an infinite loop of IDs, as this is only used for non-uniques.
+        TODO, maybe: re-shuffle once a loop has completed.
+        """
+        self.ids.append(id)
 
 
 class Args:
@@ -95,10 +100,10 @@ class Args:
             "-n", "--num", type=int, default=1000, help="The number of rows to generate"
         )
         parser.add_argument("-o", "--output", help="Output filename")
+        parser.add_argument("-r", "--random", action="store_true", help="Enable randomness on the length of some items")
         parser.add_argument("-t", "--table", help="Table name to generate SQL for")
         parser.add_argument("--validate", help="Validate an input JSON schema")
         return parser.parse_args()
-
 
 class Help:
     def __init__(self):
@@ -151,8 +156,8 @@ class Help:
             * bigint [unsigned]
             * decimal
             * double
-            * char: <0 - 2^8-1>
-            * varchar: <0 - 2^16-1>
+            * char: <1 - 2^8-1>
+            * varchar: <1 - 2^16-1>
             * timestamp
             * text
             * json
@@ -165,6 +170,11 @@ class Help:
                 * width
             * integers
                 * auto increment
+            * json, text
+                * max_length: float <0.01 - 1.00>
+                  determines the maximum length of JSON arrays and TEXT columns
+                  percentage - defaults to 0.15 which gives 4-wide JSON arrays
+                  and 4 paragraphs of lorem ipsum text columns (~2900 chars)
             * all
                 * default
                 * invisible - NOTE: Only valid for MySQL
@@ -183,6 +193,11 @@ class Utilities:
         pass
 
     def lowercase_schema(self, schema: dict) -> dict:
+        """
+        Allows input schemas to be correctly parsed if uppercase
+        letters are used (e.g. NULL as a default) without doing repeated
+        lower() calls during row creation.
+        """
         if isinstance(schema, dict):
             return {k.lower(): self.lowercase_schema(v) for k, v in schema.items()}
         elif isinstance(schema, list):
