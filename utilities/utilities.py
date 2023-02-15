@@ -1,6 +1,7 @@
 import argparse
 from collections import deque
 import ctypes
+import json
 from os import urandom
 import random
 import sys
@@ -15,7 +16,9 @@ class Allocator:
         try:
             self.lib = ctypes.CDLL("./library/fast_shuffle.so")
         except OSError as e:
-            raise SystemExit(f"FATAL: couldn't load C library - run make\n\n{e}") from None
+            raise SystemExit(
+                f"FATAL: couldn't load C library - run make\n\n{e}"
+            ) from None
         self.lib.fill_array.argtypes = [ctypes.c_uint32]
         self.lib.fill_array.restype = ctypes.POINTER(ctypes.c_uint32)
         self.lib.shuf.argtypes = [
@@ -70,7 +73,8 @@ class Args:
         parser.add_argument(
             "-f",
             "--filetype",
-            choices=["csv", "mysql", "postgres", "sqlserver", "txt"],
+            choices=["csv", "mysql", "postgresql", "sqlserver"],
+            default="mysql",
             help="Filetype to generate",
         )
         parser.add_argument(
@@ -123,7 +127,7 @@ class Help:
                 "last_modified": {
                     "type": "timestamp",
                     "nullable": "true",
-                    "default": "NULL"
+                    "default": "null"
                 }
             }
         """
@@ -140,8 +144,6 @@ class Help:
                     "col_option_n": "option"
                 }}
             }}
-
-        By default, the filename is used as the table name.
 
         Valid column types <sizes> are:
             * smallint [unsigned]
@@ -177,6 +179,19 @@ class Help:
 
 
 class Utilities:
+    def __init__(self):
+        pass
+
+    def lowercase_schema(self, schema: dict) -> dict:
+        if isinstance(schema, dict):
+            return {k.lower(): self.lowercase_schema(v) for k, v in schema.items()}
+        elif isinstance(schema, list):
+            return [self.lowercase_schema(v) for v in schema]
+        elif isinstance(schema, str):
+            return schema.lower()
+        else:
+            return schema
+
     # Farewell, distutils
     def strtobool(self, val) -> bool:
         """Convert a string representation of truth to true (1) or false (0).

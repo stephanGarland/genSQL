@@ -20,6 +20,6 @@
     "last_modified": {
         "type": "timestamp",
         "nullable": "true",
-        "default": "NULL"
+        "default": "null"
     }
 }
