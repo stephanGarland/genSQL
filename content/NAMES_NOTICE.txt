@@ -1,0 +1,9 @@
+*_names.txt were taken from Project Gutenberg, here:
+https://www.gutenberg.org/files/3201/files/
+
+Some modifications were done, namely combining the traditionally gendered
+names into combined files, and doing Windows-1252 / CRLF --> UTF-8 / LF conversion.
+
+As near as I can tell, the files are in the public domain, and as such, I do not
+intend to license my work on the files in any way.
+
