@@ -197,7 +197,6 @@ class Generator:
     def mysql(
         self, schema: dict[str, dict[str, str]], tbl_name: str, drop_table: bool = False
     ) -> tuple[str, dict[str, str]]:
-
         auto_inc_exists = False
         msg = ""
         pk = None
@@ -353,17 +352,26 @@ class Runner:
 
             elif schema[col]["type"] == "timestamp":
                 row[col] = date
-
         return row
+
+    def make_csv_rows(self, vals: list) -> list:
+        insert_rows = []
+        insert_rows.append(f"{','.join(self.tbl_cols)}\n")
+        for row in vals:
+            insert_rows.append(f"{row}\n")
+
+        return insert_rows
 
     def make_sql_rows(self, vals: list) -> list:
         insert_rows = []
         insert_rows.append("SET @@time_zone = '+00:00';\n")
+        insert_rows.append("SET autocommit=0;\n")
         insert_rows.append(f"LOCK TABLES `{self.tbl_name}` WRITE;\n")
         for row in vals:
             insert_rows.append(
                 f"INSERT INTO `{self.tbl_name}` (`{'`, `'.join(self.tbl_cols)}`) VALUES ({row});\n"
             )
+        insert_rows.append("COMMIT;\n")
         insert_rows.append(f"UNLOCK TABLES;\n")
 
         return insert_rows
@@ -372,13 +380,25 @@ class Runner:
         sql_inserts = []
         random.seed(os.urandom(4))
         for i in range(1, self.args.num + 1):
-            sql_inserts.append(self.make_row(self.schema, i))
+            row = self.make_row(self.schema, i)
+            sql_inserts.append(row)
         vals = [",".join(str(v) for v in d.values()) for d in sql_inserts]
-        lines = self.make_sql_rows(vals)
-        filename = args.output or "test.sql"
+        match args.filetype:
+            case "mysql":
+                lines = self.make_sql_rows(vals)
+                filename = args.output or "test.sql"
+            case "csv":
+                lines = self.make_csv_rows(vals)
+                filename = args.output or "test.csv"
+            case _:
+                raise ValueError(f"{args.filetype} is not a valid output format")
         try:
             with open(filename, f"{'w' if args.force else 'x'}") as f:
-                f.writelines(self.tbl_create)
+                if "sql" in args.filetype:
+                    f.writelines(self.tbl_create)
+                if args.filetype == "csv":
+                    with open("tbl_create.sql", f"{'w' if args.force else 'x'}") as ft:
+                        ft.writelines(self.tbl_create)
                 f.writelines(lines)
         except FileExistsError:
             raise OverwriteFileError(filename) from None
