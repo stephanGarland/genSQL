@@ -13,6 +13,7 @@ from exceptions.exceptions import (
     OutputFilePermissionError,
     OverwriteFileError,
     SchemaValidationError,
+    TooManyRowsError,
 )
 
 from utilities.constants import DEFAULT_MAX_FIELD_PCT, DEFAULT_VARYING_LENGTH, JSON_OBJ_MAX_KEYS, JSON_OBJ_MAX_VALS, MYSQL_INT_MIN_MAX
@@ -269,6 +270,7 @@ class Generator:
                         cols[col]["pk"] = True
                         pk = col
                     case "unique":
+                        cols[col]["unique"] = True
                         uniques.append(col)
                     case _:
                         raise ValueError(f"column attribute {k} is invalid")
@@ -309,8 +311,27 @@ class Runner:
         self.tbl_cols = tbl_cols
         self.tbl_create = tbl_create
         self.tbl_name = tbl_name
+
+        # exceeding auto_increment capacity is checked at schema validation, but since
+        # the user can specify --validate without passing --num, uniques have to be checked here
+        id_cols = {k: v for k,v in self.tbl_cols.items() if "id" in k}
+        for k, v in id_cols.items():
+            if "unsigned" in v["type"]:
+                col_max_val = MYSQL_INT_MIN_MAX[f"MYSQL_MAX_{v['type'].upper().split()[0]}_UNSIGNED"]
+            else:
+                col_max_val = MYSQL_INT_MIN_MAX[f"MYSQL_MAX_{v['type'].upper().split()[0]}_SIGNED"]
+
+            if v.get("unique"):
+                if self.args.num > col_max_val:
+                    raise TooManyRowsError(k, self.args.num, col_max_val) from None
+            else:
+                if self.args.num > col_max_val:
+                    self.rand_max_id = col_max_val
+                else:
+                    self.rand_max_id = self.args.num
+
         self.monotonic_id = self.allocate(self.args.num)
-        self.random_id = self.allocate(self.args.num, shuffle=True)
+        self.random_id = self.allocate(self.rand_max_id, shuffle=True)
         self.unique_id = self.allocate(self.args.num, shuffle=True)
         try:
             with open("content/dates.txt", "r") as f:
@@ -356,9 +377,9 @@ class Runner:
                     row[col] = self.unique_id.allocate()
                 else:
                     row[col] = self.random_id.allocate()
-                    # Return an id for allocation 2% of the time
-                    if idx % 100 < 2:
-                        self.random_id.release(row[col])
+
+                    # these are appended to the right of the deque, so they won't be immediately repeated
+                    self.random_id.release(row[col])
 
             elif col == "first_name":
                 random_first = self.sample(self.first_names, self.num_rows_first_names)
