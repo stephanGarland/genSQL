@@ -212,14 +212,13 @@ class Generator:
         for col, col_attributes in schema.items():
             col_opts = []
             for k, v in col_attributes.items():
-                match (k.lower()):
+                match k:
                     case "type":
                         cols[col]["type"] = v
                     case "auto increment":
                         cols[col]["auto_inc"] = self.utils.strtobool(v)
                     case "default":
-                        if not "nul" in v.lower():
-                            cols[col]["default"] = v
+                        cols[col]["default"] = v
                     case "invisible":
                         cols[col]["invisible"] = self.utils.strtobool(v)
                     case "width":
@@ -307,7 +306,7 @@ class Runner:
         if any("timestamp" in s.values() for s in schema.values()):
             date = self.sample(self.dates, self.args.num)
         for col, opts in schema.items():
-            if "id" in col.lower():
+            if "id" in col:
                 if schema.get(col, {}).get("auto increment"):
                     row[col] = self.monotonic_id.allocate()
                 elif schema.get(col, {}).get("unique"):
@@ -318,17 +317,17 @@ class Runner:
                     if idx % 100 < 2:
                         self.random_id.release(row[col])
 
-            elif col.lower() == "first_name":
+            elif col == "first_name":
                 random_first = self.sample(self.first_names, self.num_rows_first_names)
                 first_name = f"{random_first}".replace("'", "''")
                 row[col] = f"'{first_name}'"
 
-            elif col.lower() == "last_name":
+            elif col == "last_name":
                 random_last = self.sample(self.last_names, self.num_rows_last_names)
                 last_name = f"{random_last}".replace("'", "''")
                 row[col] = f"'{last_name}'"
 
-            elif col.lower() == "full_name":
+            elif col == "full_name":
                 random_first = self.sample(self.first_names, self.num_rows_first_names)
                 random_last = self.sample(self.last_names, self.num_rows_last_names)
                 full_name = f"{random_last}, {random_first}".replace("'", "''")
@@ -339,6 +338,7 @@ class Runner:
                 keys = self.sample(self.wordlist, self.num_rows_wordlist, 3)
                 vals = self.sample(self.wordlist, self.num_rows_wordlist, 5)
                 json_dict[keys.pop()] = vals.pop()
+                # make 20% of the JSON objects nested with a list object
                 if not idx % 5:
                     key = keys.pop()
                     json_dict[key] = {}
@@ -346,6 +346,7 @@ class Runner:
                 row[col] = f"'{json.dumps(json_dict)}'"
 
             elif schema[col]["type"] == "text":
+                # 50 random words
                 row[
                     col
                 ] = f"'{' '.join(self.sample(self.wordlist, self.num_rows_wordlist, 50))}'"
@@ -386,15 +387,16 @@ class Runner:
 
 
 if __name__ == "__main__":
-    help = utilities.Help()
+    utils = utilities.Utilities()
+    h = utilities.Help()
     args = utilities.Args().make_args()
     g = Generator()
     if not args.debug:
         sys.tracebacklimit = 0
     if args.extended_help:
-        help.schema()
+        h.schema()
     elif args.generate:
-        skeleton = help.make_skeleton()
+        skeleton = h.make_skeleton()
         try:
             filename = args.output or "skeleton.json"
             with open(f"{filename}", f"{'w' if args.force else 'x'}") as f:
@@ -421,6 +423,7 @@ if __name__ == "__main__":
             raise OutputFilePermissionError(filename) from None
     tbl_name = args.table or "gensql"
     schema_dict = g.parse_schema()
+    schema_dict = utils.lowercase_schema(schema_dict)
     g.validate_schema(schema_dict)
     tbl_create, tbl_cols = g.mysql(schema_dict, tbl_name, args.drop_table)
     r = Runner(args, schema_dict, tbl_name, tbl_cols, tbl_create)

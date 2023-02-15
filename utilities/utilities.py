@@ -1,6 +1,7 @@
 import argparse
 from collections import deque
 import ctypes
+import json
 from os import urandom
 import random
 import sys
@@ -123,7 +124,7 @@ class Help:
                 "last_modified": {
                     "type": "timestamp",
                     "nullable": "true",
-                    "default": "NULL"
+                    "default": "null"
                 }
             }
         """
@@ -177,6 +178,19 @@ class Help:
 
 
 class Utilities:
+    def __init__(self):
+        pass
+
+    def lowercase_schema(self, schema: dict) -> dict:
+        if isinstance(schema, dict):
+            return {k.lower(): self.lowercase_schema(v) for k, v in schema.items()}
+        elif isinstance(schema, list):
+            return [self.lowercase_schema(v) for v in schema]
+        elif isinstance(schema, str):
+            return schema.lower()
+        else:
+            return schema
+
     # Farewell, distutils
     def strtobool(self, val) -> bool:
         """Convert a string representation of truth to true (1) or false (0).
