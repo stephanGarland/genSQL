@@ -120,36 +120,6 @@ mysql -h 127.0.0.1 -usgarland -ppassword test -e   0.02s user 0.01s system 0% cp
 
 Or, in terms of ratios, using chunking is approximately 3x as fast as the baseline, while loading a CSV is approximately 4x as fast as the baseline.
 
-```
-# baseline
-❯ time mysql -h localhost -usgarland -ppassword test < test.sql
-mysql -h localhost -usgarland -ppassword test < test.sql  32.75s user 10.90s system 14% cpu 4:55.91 total
-# no unique checks
-❯ time mysql -h localhost -usgarland -ppassword test < test.sql
-mysql -h localhost -usgarland -ppassword test < test.sql  25.11s user 8.67s system 14% cpu 3:48.38 total
-# no unique checks, single insert, 1 gb buffer size
-❯ time mysql -h localhost -usgarland -ppassword --max-allowed-packet=1073741824 test < test.sql
-mysql -h localhost -usgarland -ppassword --max-allowed-packet=1073741824 test  10.64s user 0.91s system 7% cpu 2:28.29 total
-```
-
-### Loading data
-
-For MySQL, if you have access to the host (i.e. not DBaaS), by far the fastest method to load data is by using [LOAD DATA INFILE](https://dev.mysql.com/doc/refman/8.0/en/load-data.html). To do this, you first need to create the table. GenSQL generates a table definition separately from the data CSV, named `tbl_create.sql`. You can use the `mysql` client to create the table like so:
-
-```shell
-mysql -h $HOST -u $USER -p $SCHEMA < tbl_create.sql
-```
-
-And then, from within the `mysql` client:
-
-```mysql
-mysql> LOAD DATA INFILE '/path/to/your/file.csv' INTO TABLE $TABLE_NAME FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY "'" IGNORE 1 LINES;
-Query OK, 1000 rows affected (1.00 sec)
-Records: 1000  Deleted: 0  Skipped: 0  Warnings: 0
-```
-
-Otherwise, you can use the same method for `tbl_create.sql` for the entirety of the data load. It will be significantly slower, but with `autocommit=0` (set for you by default), it's manageable.
-
 ## Benchmarks
 
 **NOTE: THESE ARE NOT CURRENT, AND SHOULD NOT BE RELIED ON**
