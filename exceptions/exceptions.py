@@ -71,6 +71,7 @@ class OverwriteFileError(BaseError):
     def __reduce__(self):
         return (OverwriteFileError, self.msg)
 
+
 class TooManyRowsError(BaseError):
     """The number of rows exceeds the maximum capacity of a unique column"""
 
