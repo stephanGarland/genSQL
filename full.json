@@ -16,17 +16,18 @@
         "nullable": "false"
     },
     "external_id": {
-        "type": "bigint unsigned",
+        "type": "int unsigned",
         "nullable": "false",
         "unique": "true",
         "default": "0"
     },
-    "tiny_id": {
+    "small_id": {
         "type": "smallint",
         "nullable": "false"
     },
     "about_user": {
         "type": "text",
+        "max_length": "0.30",
         "nullable": "true"
     },
     "user_json": {
