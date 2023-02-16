@@ -70,3 +70,20 @@ class OverwriteFileError(BaseError):
 
     def __reduce__(self):
         return (OverwriteFileError, self.msg)
+
+
+class TooManyRowsError(BaseError):
+    """The number of rows exceeds the maximum capacity of a unique column"""
+
+    def __init__(self, col_name, num_rows, max_len, msg=None):
+        self.col_name = col_name
+        self.num_rows = num_rows
+        self.max_len = max_len
+        if msg:
+            self.msg = msg
+        else:
+            self.msg = f"The specified number of rows {self.num_rows} exceeds the maximum capacity {self.max_len} of column {self.col_name}"
+        super(TooManyRowsError, self).__init__(self.msg)
+
+    def __reduce__(self):
+        return (OverwriteFileError, self.msg)

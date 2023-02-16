@@ -171,3 +171,5 @@ poetry.toml
 
 *.csv
 *.sql
+*.gz
+library/fast_shuffle.so
