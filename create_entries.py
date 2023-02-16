@@ -16,7 +16,13 @@ from exceptions.exceptions import (
     TooManyRowsError,
 )
 
-from utilities.constants import DEFAULT_MAX_FIELD_PCT, DEFAULT_VARYING_LENGTH, JSON_OBJ_MAX_KEYS, JSON_OBJ_MAX_VALS, MYSQL_INT_MIN_MAX
+from utilities.constants import (
+    DEFAULT_MAX_FIELD_PCT,
+    DEFAULT_VARYING_LENGTH,
+    JSON_OBJ_MAX_KEYS,
+    JSON_OBJ_MAX_VALS,
+    MYSQL_INT_MIN_MAX,
+)
 from utilities import utilities
 
 
@@ -101,8 +107,12 @@ class Generator:
                 if "unsigned" in col_type:
                     col_min_val = 0
                 else:
-                    col_min_val = MYSQL_INT_MIN_MAX[f"MYSQL_MIN_{col_type.upper().split()[0]}_SIGNED"]
-                col_max_val = MYSQL_INT_MIN_MAX[f"MYSQL_MAX_{col_type.upper().split()[0]}_UNSIGNED"]
+                    col_min_val = MYSQL_INT_MIN_MAX[
+                        f"MYSQL_MIN_{col_type.upper().split()[0]}_SIGNED"
+                    ]
+                col_max_val = MYSQL_INT_MIN_MAX[
+                    f"MYSQL_MAX_{col_type.upper().split()[0]}_UNSIGNED"
+                ]
             if col_pk:
                 pks.append(k)
             if not col_type:
@@ -305,7 +315,7 @@ class Generator:
 
 class Runner:
     def __init__(self, args, schema, tbl_name, tbl_cols, tbl_create):
-        self.allocate = utilities.Allocator
+        self.allocator = utilities.Allocator
         self.args = args
         self.schema = schema
         self.tbl_cols = tbl_cols
@@ -314,12 +324,16 @@ class Runner:
 
         # exceeding auto_increment capacity is checked at schema validation, but since
         # the user can specify --validate without passing --num, uniques have to be checked here
-        id_cols = {k: v for k,v in self.tbl_cols.items() if "id" in k}
+        id_cols = {k: v for k, v in self.tbl_cols.items() if "id" in k}
         for k, v in id_cols.items():
             if "unsigned" in v["type"]:
-                col_max_val = MYSQL_INT_MIN_MAX[f"MYSQL_MAX_{v['type'].upper().split()[0]}_UNSIGNED"]
+                col_max_val = MYSQL_INT_MIN_MAX[
+                    f"MYSQL_MAX_{v['type'].upper().split()[0]}_UNSIGNED"
+                ]
             else:
-                col_max_val = MYSQL_INT_MIN_MAX[f"MYSQL_MAX_{v['type'].upper().split()[0]}_SIGNED"]
+                col_max_val = MYSQL_INT_MIN_MAX[
+                    f"MYSQL_MAX_{v['type'].upper().split()[0]}_SIGNED"
+                ]
 
             if v.get("unique"):
                 if self.args.num > col_max_val:
@@ -330,9 +344,9 @@ class Runner:
                 else:
                     self.rand_max_id = self.args.num
 
-        self.monotonic_id = self.allocate(self.args.num)
-        self.random_id = self.allocate(self.rand_max_id, shuffle=True)
-        self.unique_id = self.allocate(self.args.num, shuffle=True)
+        self.monotonic_id = self.allocator(self.args.num)
+        self.random_id = self.allocator(self.rand_max_id, shuffle=True)
+        self.unique_id = self.allocator(self.args.num, shuffle=True)
         try:
             with open("content/dates.txt", "r") as f:
                 self.dates = f.readlines()
@@ -399,27 +413,41 @@ class Runner:
 
             elif schema[col]["type"] == "json":
                 json_dict = {}
-                keys = self.sample(self.wordlist, self.num_rows_wordlist, JSON_OBJ_MAX_KEYS)
-                vals = self.sample(self.wordlist, self.num_rows_wordlist, JSON_OBJ_MAX_VALS)
+                keys = self.sample(
+                    self.wordlist, self.num_rows_wordlist, JSON_OBJ_MAX_KEYS
+                )
+                vals = self.sample(
+                    self.wordlist, self.num_rows_wordlist, JSON_OBJ_MAX_VALS
+                )
                 json_dict[keys.pop()] = vals.pop()
-                max_rows_pct = float(schema.get(col, {}).get("max_length", DEFAULT_MAX_FIELD_PCT))
+                max_rows_pct = float(
+                    schema.get(col, {}).get("max_length", DEFAULT_MAX_FIELD_PCT)
+                )
                 if self.args.random:
-                    json_arr_len = ceil(random.random() * (JSON_OBJ_MAX_VALS - 1) * max_rows_pct)
+                    json_arr_len = ceil(
+                        random.random() * (JSON_OBJ_MAX_VALS - 1) * max_rows_pct
+                    )
                 else:
                     json_arr_len = ceil((JSON_OBJ_MAX_VALS - 1) * max_rows_pct)
                 # make 20% of the JSON objects nested with a list object of length
                 if not idx % 5:
                     key = keys.pop()
                     json_dict[key] = {}
-                    json_dict[key][keys.pop()] = [vals.pop() for _ in range(json_arr_len)]
+                    json_dict[key][keys.pop()] = [
+                        vals.pop() for _ in range(json_arr_len)
+                    ]
                 row[col] = f"'{json.dumps(json_dict)}'"
 
             elif schema[col]["type"] == "text":
-                max_rows_pct = float(schema.get(col, {}).get("max_length", DEFAULT_MAX_FIELD_PCT))
+                max_rows_pct = float(
+                    schema.get(col, {}).get("max_length", DEFAULT_MAX_FIELD_PCT)
+                )
                 # e.g. if max_rows_pct is 0.15, with 25 rows in lorem ipsum, we get a range of 1-4 rows
                 if DEFAULT_VARYING_LENGTH:
                     if self.args.random:
-                        lorem_rows = ceil(random.random() * self.num_rows_lorem_ipsum * max_rows_pct)
+                        lorem_rows = ceil(
+                            random.random() * self.num_rows_lorem_ipsum * max_rows_pct
+                        )
                     # otherwise, default to a single row, but 20% of the time use the maximum allowed
                     else:
                         lorem_rows = 1
