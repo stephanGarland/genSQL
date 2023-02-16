@@ -7,11 +7,13 @@ Ever want to quickly create millions of rows of random data for a database, with
 ## Usage
 
 ```shell
-usage: create_entries.py [-h] [--extended-help] [-d] [--drop-table] [--force] [-f {csv,mysql,postgresql,sqlserver}] [--generate-dates] [-g] [-i INPUT] [-n NUM] [-o OUTPUT] [-r] [-t TABLE] [--validate VALIDATE]
+usage: create_entries.py [-h] [--extended-help] [-c] [-d] [--drop-table] [--force] [-f {csv,mysql,postgresql,sqlserver}] [--generate-dates] [-g] [-i INPUT] [-n NUM] [-o OUTPUT]
+                         [-r] [-t TABLE] [--validate VALIDATE]
 
 options:
   -h, --help            show this help message and exit
   --extended-help       Print extended help
+  -c, --chunk           Chunk SQL INSERT statements
   -d, --debug           Print tracebacks for errors
   --drop-table          WARNING: DESTRUCTIVE - use DROP TABLE with generation
   --force               WARNING: DESTRUCTIVE - overwrite any files
@@ -64,8 +66,8 @@ GenSQL expects a JSON input schema, of the format:
 
 ### Loading data
 
-For MySQL, if you have access to the host (i.e. not DBaaS), by far the fastest method to load data is by using [LOAD DATA INFILE](https://dev.mysql.com/doc/refman/8.0/en/load-data.html).
-To do this, you first need to create the table. GenSQL generates a table definition separately from the data CSV, named `tbl_create.sql`. You can use the `mysql` client to create the table like so:
+For MySQL, if you have access to the host (i.e. not DBaaS), by far the fastest method to load data is by using [LOAD DATA INFILE](https://dev.mysql.com/doc/refman/8.0/en/load-data.html) from a CSV file.
+To do this, you first need to create the table. When you specify `--filetype csv`, GenSQL generates a table definition separately from the data CSV, named `tbl_create.sql`. You can use the `mysql` client to create the table like so:
 
 ```shell
 mysql -h $HOST -u $USER -p $SCHEMA < tbl_create.sql
@@ -74,16 +76,67 @@ mysql -h $HOST -u $USER -p $SCHEMA < tbl_create.sql
 And then, from within the `mysql` client:
 
 ```mysql
+mysql> SET @@time_zone = '+00:00';
 mysql> LOAD DATA INFILE '/path/to/your/file.csv' INTO TABLE $TABLE_NAME FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY "'" IGNORE 1 LINES;
 Query OK, 1000 rows affected (1.00 sec)
 Records: 1000  Deleted: 0  Skipped: 0  Warnings: 0
 ```
 
-Otherwise, you can use the same method for `tbl_create.sql` for the entirety of the data load. It will be significantly slower, but with `autocommit=0` (set for you by default), it's manageable.
+If free space on the host is an issue, and you have an extremely large file, you can compress the file and then pipe it through a named pipe to the database, like this:
+
+```shell
+mkfifo --mode=0644 /path/to/your/pipe
+gzip -c -d sql_data.csv.gz > /path/to/your/pipe &
+mysql -h $HOST -u $USER -p$PASS $SCHEMA -e "SET @@time_zone = '+00:00'; LOAD DATA INFILE '/path/to/your/pipe' INTO TABLE $TABLE_NAME FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY \"'\" IGNORE 1 LINES;"
+```
+
+Note that this will may be somewhat slower than simply decompressing the file and loading it.
+
+However, if you don't have access to the host, there are some tricks GenSQL has to speed things up. Specifically:
+
+* Disabling autocommit
+  * Normally, each statement is committed one at a time. With this disabled, an explicit `COMMIT` statement must be used to commit.
+* Disabling unique checks
+  * Normally, the SQL engine will check that any columns declaring `UNIQUE` constraints do in fact meet that constraint. With this disabled, repetitive `INSERT` statements are much faster, with the obvious risk of violating the constraint. For nonsense data that has been created with unique elements, this is safe to temporarily disable.
+* Multi-INSERT statements
+  * Normally, an `INSERT` statement might look something like `INSERT INTO $TABLE (col_1, col_2) VALUES (row_1, row_2);` Instead, they can be written like `INSERT INTO $TABLE (col_1, col_2) VALUES (row_1, row_2), (row_3, row_4),` with `n` tuples of row data. By default, `mysqld` (the server) is limited to a 64 MiB packet size, and `mysql` (the client) to a 16 MiB packet size. Both of these can be altered up to 1 GiB, but the server side may not be accessible to everyone, so GenSQL limits itself to a 10,000 row chunk size, which should comfortably fit under the server limit. For the client, you'll need to pass `--max-allowed-packet=67108864` as an arg.
+
+
+Testing with inserting 100,000 rows (DB is backed by spinning disks):
+
+```shell
+# autocommit and unique checks disabled, but no chunking
+❯ time mysql -h localhost -usgarland -ppassword test < normal.sql
+mysql -h localhost -usgarland -ppassword test < normal.sql  34.55s user 11.48s system 14% cpu 5:15.65 total
+
+# autocommit and unique checks disabled, chunking into 10,000 INSERTs
+❯ time mysql -h localhost -usgarland -ppassword test --max-allowed-packet=67108864 < chunk.sql
+mysql -h localhost -usgarland -ppassword test --max-allowed-packet=67108864 < chunk.sql 10.74s user 0.21s system 9% cpu 1:50.68 total
+
+# LOAD DATA INFILE
+❯ time mysql -h 127.0.0.1 -usgarland -ppassword test -e "SET @@time_zone = '+00:00'; LOAD DATA INFILE '/mnt/ramdisk/test.csv' INTO TABLE gensql FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY \"'\" IGNORE 1 LINES;"
+mysql -h 127.0.0.1 -usgarland -ppassword test -e   0.02s user 0.01s system 0% cpu 1:19.99 total
+```
+
+Or, in terms of ratios, using chunking is approximately 3x as fast as the baseline, while loading a CSV is approximately 4x as fast as the baseline.
+
+```
+# baseline
+❯ time mysql -h localhost -usgarland -ppassword test < test.sql
+mysql -h localhost -usgarland -ppassword test < test.sql  32.75s user 10.90s system 14% cpu 4:55.91 total
+# no unique checks
+❯ time mysql -h localhost -usgarland -ppassword test < test.sql
+mysql -h localhost -usgarland -ppassword test < test.sql  25.11s user 8.67s system 14% cpu 3:48.38 total
+# no unique checks, single insert, 1 gb buffer size
+❯ time mysql -h localhost -usgarland -ppassword --max-allowed-packet=1073741824 test < test.sql
+mysql -h localhost -usgarland -ppassword --max-allowed-packet=1073741824 test  10.64s user 0.91s system 7% cpu 2:28.29 total
+```
 
 ## Benchmarks
 
-Testing the creation of the standard 4-column schema, as well as an extended 8-column schema, with 1,000,000 rows. These may not be precisely up to date, but actual results should be close to this if not faster.
+**NOTE: THESE ARE NOT CURRENT, AND SHOULD NOT BE RELIED ON**
+
+Testing the creation of the standard 4-column schema, as well as an extended 8-column schema, with 1,000,000 rows.
 
 ### M1 Macbook Air
 

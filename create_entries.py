@@ -17,6 +17,7 @@ from exceptions.exceptions import (
 )
 
 from utilities.constants import (
+    DEFAULT_INSERT_CHUNK_SIZE,
     DEFAULT_MAX_FIELD_PCT,
     DEFAULT_VARYING_LENGTH,
     JSON_OBJ_MAX_KEYS,
@@ -479,12 +480,27 @@ class Runner:
         insert_rows = []
         insert_rows.append("SET @@time_zone = '+00:00';\n")
         insert_rows.append("SET autocommit=0;\n")
+        insert_rows.append("SET unique_checks=0;\n")
         insert_rows.append(f"LOCK TABLES `{self.tbl_name}` WRITE;\n")
-        for row in vals:
-            insert_rows.append(
-                f"INSERT INTO `{self.tbl_name}` (`{'`, `'.join(self.tbl_cols)}`) VALUES ({row});\n"
-            )
+        if self.args.chunk:
+            for i in range(0, len(vals), DEFAULT_INSERT_CHUNK_SIZE):
+                insert_rows.append(
+                    f"INSERT INTO `{self.tbl_name}` (`{'`, `'.join(self.tbl_cols)}`) VALUES\n"
+                )
+                chunk_list = vals[i : i + DEFAULT_INSERT_CHUNK_SIZE]
+                for row in chunk_list:
+                    insert_rows.append(f"({row}),\n")
+                # if we reach the end of a chunk list, make the multi-insert a commit by swapping
+                # the last comma to a semi-colon
+                insert_rows[-1] = insert_rows[-1][::-1].replace(",", ";", 1)[::-1]
+        else:
+            for row in vals:
+                insert_rows.append(
+                    f"INSERT INTO `{self.tbl_name}` (`{'`, `'.join(self.tbl_cols)}`) VALUES ({row});\n"
+                )
         insert_rows.append("COMMIT;\n")
+        insert_rows.append("SET autocommit=1;\n")
+        insert_rows.append("SET unique_checks=1;\n")
         insert_rows.append(f"UNLOCK TABLES;\n")
 
         return insert_rows
@@ -554,6 +570,8 @@ if __name__ == "__main__":
             raise OverwriteFileError(filename) from None
         except PermissionError:
             raise OutputFilePermissionError(filename) from None
+    if args.chunk and "sql" not in args.filetype:
+        print(f"WARNING: --chunk has no effect on {args.filetype} output, ignoring")
     tbl_name = args.table or "gensql"
     schema_dict = g.parse_schema()
     schema_dict = utils.lowercase_schema(schema_dict)
