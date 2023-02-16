@@ -62,6 +62,9 @@ class Args:
             help="Print extended help",
         )
         parser.add_argument(
+            "-c", "--chunk", action="store_true", help="Chunk SQL INSERT statements"
+        )
+        parser.add_argument(
             "-d", "--debug", action="store_true", help="Print tracebacks for errors"
         )
         parser.add_argument(
@@ -100,10 +103,16 @@ class Args:
             "-n", "--num", type=int, default=1000, help="The number of rows to generate"
         )
         parser.add_argument("-o", "--output", help="Output filename")
-        parser.add_argument("-r", "--random", action="store_true", help="Enable randomness on the length of some items")
+        parser.add_argument(
+            "-r",
+            "--random",
+            action="store_true",
+            help="Enable randomness on the length of some items",
+        )
         parser.add_argument("-t", "--table", help="Table name to generate SQL for")
         parser.add_argument("--validate", help="Validate an input JSON schema")
         return parser.parse_args()
+
 
 class Help:
     def __init__(self):
