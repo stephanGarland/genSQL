@@ -65,6 +65,12 @@ class Args:
             "-c", "--chunk", action="store_true", help="Chunk SQL INSERT statements"
         )
         parser.add_argument(
+            "--country",
+            choices=["au", "de", "fr", "ke", "jp", "mx", "ua", "uk", "us"],
+            default="us", 
+            help="The country's phone number structure to use if generating phone numbers"
+        ]
+        parser.add_argument(
             "-d", "--debug", action="store_true", help="Print tracebacks for errors"
         )
         parser.add_argument(
@@ -103,6 +109,7 @@ class Args:
             "-n", "--num", type=int, default=1000, help="The number of rows to generate"
         )
         parser.add_argument("-o", "--output", help="Output filename")
+        parser.add_argument("-p", "--pedantic", action="store_true", help="Niceties that slightly slow things down, like all lower-case email addresses")
         parser.add_argument(
             "-r",
             "--random",
