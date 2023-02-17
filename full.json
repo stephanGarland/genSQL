@@ -38,5 +38,10 @@
         "type": "timestamp",
         "nullable": "true",
         "default": "NULL"
+    },
+    "email": {
+        "type": "varchar",
+        "width": "255",
+        "nullable": "true"
     }
 }

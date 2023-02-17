@@ -23,6 +23,7 @@ from utilities.constants import (
     JSON_OBJ_MAX_KEYS,
     JSON_OBJ_MAX_VALS,
     MYSQL_INT_MIN_MAX,
+    PHONE_NUMBER,
 )
 from utilities import utilities
 
@@ -90,6 +91,8 @@ class Generator:
             "timestamp",
             "text",
             "json",
+            "email",
+            "phone",
         ]
         pks = []
         errors = {}
@@ -116,6 +119,20 @@ class Generator:
                 ]
             if col_pk:
                 pks.append(k)
+            if k == "phone" and "char" not in col_type:
+                _add_error(
+                    errors,
+                    (k, "type"),
+                    v,
+                    f"column `{k}` must be of type CHAR or VARCHAR",
+                )
+            if k == "phone" and col_unique:
+                _add_error(
+                    errors,
+                    (k, "unique"),
+                    v,
+                    f"unique is not a valid option for column `{k}` - this is a performance decision; numbers are still unlikely to collide"
+                )
             if not col_type:
                 _add_error(
                     errors,
@@ -135,7 +152,7 @@ class Generator:
                     errors,
                     (k, "width"),
                     v,
-                    f"column type `{col_type}` is not supported",
+                    f"width is not a valid option for column `{k`} of type `{col_type}`",
                 )
             if col_autoinc and "int" not in col_type:
                 _add_error(
@@ -395,7 +412,6 @@ class Runner:
 
                     # these are appended to the right of the deque, so they won't be immediately repeated
                     self.random_id.release(row[col])
-
             elif col == "first_name":
                 random_first = self.sample(self.first_names, self.num_rows_first_names)
                 first_name = f"{random_first}".replace("'", "''")
@@ -414,13 +430,14 @@ class Runner:
 
             elif schema[col]["type"] == "json":
                 json_dict = {}
-                keys = self.sample(
+                json_keys = self.sample(
                     self.wordlist, self.num_rows_wordlist, JSON_OBJ_MAX_KEYS
                 )
-                vals = self.sample(
-                    self.wordlist, self.num_rows_wordlist, JSON_OBJ_MAX_VALS
+                # grab an extra for use with email if needed
+                json_vals = self.sample(
+                    self.wordlist, self.num_rows_wordlist, JSON_OBJ_MAX_VALS + 1
                 )
-                json_dict[keys.pop()] = vals.pop()
+                json_dict[json_keys.pop()] = json_vals.pop()
                 max_rows_pct = float(
                     schema.get(col, {}).get("max_length", DEFAULT_MAX_FIELD_PCT)
                 )
@@ -432,12 +449,26 @@ class Runner:
                     json_arr_len = ceil((JSON_OBJ_MAX_VALS - 1) * max_rows_pct)
                 # make 20% of the JSON objects nested with a list object of length
                 if not idx % 5:
-                    key = keys.pop()
+                    key = json_keys.pop()
                     json_dict[key] = {}
-                    json_dict[key][keys.pop()] = [
-                        vals.pop() for _ in range(json_arr_len)
+                    json_dict[key][json_keys.pop()] = [
+                        json_vals.pop() for _ in range(json_arr_len)
                     ]
                 row[col] = f"'{json.dumps(json_dict)}'"
+
+            elif col == "email":
+                try:
+                    email_domain = json_vals.pop()
+                except UnboundLocalError:
+                    email_domain = self.sample(self.wordlist, self.num_rows_wordlist)
+                try:
+                    email_local = random_first
+                except UnboundLocalError:
+                    email_local = self.sample(self.first_names, self.num_rows_first_names)
+                if self.args.pedantic:
+                    email_local = email_local.lower()
+                row[col] = f"'{email_local}@{email_domain}.com'"
+            elif col == "phone":
 
             elif schema[col]["type"] == "text":
                 max_rows_pct = float(
