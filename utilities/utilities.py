@@ -9,10 +9,14 @@ from textwrap import dedent
 
 
 class Allocator:
-    def __init__(self, id_max: int, shuffle: bool = False):
+    def __init__(
+        self, id_min: int, id_max: int, ranged_arr: bool = False, shuffle: bool = False
+    ):
         random.seed(urandom(8))
         self.c_rand_seed = random.getrandbits(32)
+        self.id_min = id_min
         self.id_max = id_max
+        self.id_range = self.id_max - self.id_min
         try:
             self.lib = ctypes.CDLL("./library/fast_shuffle.so")
         except OSError as e:
@@ -26,10 +30,13 @@ class Allocator:
             ctypes.c_uint32,
             ctypes.c_uint32,
         ]
-        self.id_list_ptr = self.lib.fill_array(self.id_max)
+        if not ranged_arr:
+            self.id_list_ptr = self.lib.fill_array(self.id_max)
+        else:
+            self.id_list_ptr = self.lib.fill_array_range(self.id_min, self.id_max)
         if shuffle:
-            self.lib.shuf(self.id_list_ptr, self.id_max, self.c_rand_seed)
-        self.id_list = (ctypes.c_uint32 * self.id_max).from_address(
+            self.lib.shuf(self.id_list_ptr, self.id_range, self.c_rand_seed)
+        self.id_list = (ctypes.c_uint32 * self.id_range).from_address(
             ctypes.addressof(self.id_list_ptr.contents)
         )
         self.ids = deque(self.id_list)
@@ -67,9 +74,9 @@ class Args:
         parser.add_argument(
             "--country",
             choices=["au", "de", "fr", "ke", "jp", "mx", "ua", "uk", "us"],
-            default="us", 
-            help="The country's phone number structure to use if generating phone numbers"
-        ]
+            default="us",
+            help="The country's phone number structure to use if generating phone numbers",
+        )
         parser.add_argument(
             "-d", "--debug", action="store_true", help="Print tracebacks for errors"
         )
@@ -109,7 +116,6 @@ class Args:
             "-n", "--num", type=int, default=1000, help="The number of rows to generate"
         )
         parser.add_argument("-o", "--output", help="Output filename")
-        parser.add_argument("-p", "--pedantic", action="store_true", help="Niceties that slightly slow things down, like all lower-case email addresses")
         parser.add_argument(
             "-r",
             "--random",
