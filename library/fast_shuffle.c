@@ -14,6 +14,18 @@ uint32_t *fill_array(uint32_t size) {
     return arr;
 }
 
+uint32_t *fill_array_range(uint32_t start, uint32_t end) {
+    uint32_t size = end - start;
+    uint32_t *arr = calloc(size, sizeof(uint32_t));
+    if (!arr) {
+        return NULL;
+    }
+    for (uint32_t i = start; i <= end; i++) {
+        arr[i] = i;
+    }
+    return arr;
+}
+
 uint32_t right_shift(uint32_t range, uint32_t *seed) {
     uint64_t random32bit, multiresult;
     uint32_t leftover, threshold;
