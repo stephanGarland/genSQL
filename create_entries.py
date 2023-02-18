@@ -131,7 +131,7 @@ class Generator:
                     errors,
                     (k, "unique"),
                     v,
-                    f"unique is not a valid option for column `{k}` - this is a performance decision; numbers are still unlikely to collide"
+                    f"unique is not a valid option for column `{k}` - this is a performance decision; numbers are still unlikely to collide",
                 )
             if not col_type:
                 _add_error(
@@ -152,7 +152,7 @@ class Generator:
                     errors,
                     (k, "width"),
                     v,
-                    f"width is not a valid option for column `{k`} of type `{col_type}`",
+                    f"width is not a valid option for column `{k}` of type `{col_type}`",
                 )
             if col_autoinc and "int" not in col_type:
                 _add_error(
@@ -277,6 +277,9 @@ class Generator:
             msg += f"DROP TABLE IF EXISTS `{tbl_name}`;\n"
         msg += f"CREATE TABLE `{tbl_name}` (\n"
         for col, col_attributes in schema.items():
+            # this may expand in the future
+            if col in ["phone"]:
+                cols[col]["create_ranged_arr"] = True
             col_opts = []
             for k, v in col_attributes.items():
                 match k:
@@ -339,6 +342,8 @@ class Runner:
         self.tbl_cols = tbl_cols
         self.tbl_create = tbl_create
         self.tbl_name = tbl_name
+        _has_monotonic = False
+        _has_unique = False
 
         # exceeding auto_increment capacity is checked at schema validation, but since
         # the user can specify --validate without passing --num, uniques have to be checked here
@@ -353,18 +358,25 @@ class Runner:
                     f"MYSQL_MAX_{v['type'].upper().split()[0]}_SIGNED"
                 ]
 
+            if v.get("auto_inc"):
+                _has_monotonic = True
             if v.get("unique"):
+                _has_unique = True
                 if self.args.num > col_max_val:
                     raise TooManyRowsError(k, self.args.num, col_max_val) from None
+            # if uniquity isn't required, and the requested number of rows is greater
+            # than the column can handle, just set it to the column's max since we can repeat
             else:
                 if self.args.num > col_max_val:
                     self.rand_max_id = col_max_val
                 else:
                     self.rand_max_id = self.args.num
 
-        self.monotonic_id = self.allocator(self.args.num)
-        self.random_id = self.allocator(self.rand_max_id, shuffle=True)
-        self.unique_id = self.allocator(self.args.num, shuffle=True)
+        if _has_monotonic:
+            self.monotonic_id = self.allocator(0, self.args.num)
+        self.random_id = self.allocator(0, self.rand_max_id, shuffle=True)
+        if _has_unique:
+            self.unique_id = self.allocator(0, self.args.num, shuffle=True)
         try:
             with open("content/dates.txt", "r") as f:
                 self.dates = f.readlines()
@@ -397,9 +409,9 @@ class Runner:
             sample_list.append(iterable[idx])
         return sample_list
 
-    def make_row(self, schema: dict, idx: int) -> dict:
+    def make_row(self, schema: dict, idx: int, has_timestamp: bool) -> dict:
         row = {}
-        if any("timestamp" in s.values() for s in schema.values()):
+        if has_timestamp:
             date = self.sample(self.dates, self.args.num)
         for col, opts in schema.items():
             if "id" in col:
@@ -464,12 +476,15 @@ class Runner:
                 try:
                     email_local = random_first
                 except UnboundLocalError:
-                    email_local = self.sample(self.first_names, self.num_rows_first_names)
-                if self.args.pedantic:
-                    email_local = email_local.lower()
-                row[col] = f"'{email_local}@{email_domain}.com'"
+                    email_local = self.sample(
+                        self.first_names, self.num_rows_first_names
+                    )
+                row[col] = f"'{email_local.lower()}@{email_domain}.com'"
             elif col == "phone":
-
+                phone_digits = [str(x) for x in range(10)]
+                random.shuffle(phone_digits)
+                phone_str = "".join(phone_digits)
+                row[col] = f"'{PHONE_NUMBER[args.country](phone_str)}'"
             elif schema[col]["type"] == "text":
                 max_rows_pct = float(
                     schema.get(col, {}).get("max_length", DEFAULT_MAX_FIELD_PCT)
@@ -521,8 +536,8 @@ class Runner:
                 chunk_list = vals[i : i + DEFAULT_INSERT_CHUNK_SIZE]
                 for row in chunk_list:
                     insert_rows.append(f"({row}),\n")
-                # if we reach the end of a chunk list, make the multi-insert a commit by swapping
-                # the last comma to a semi-colon
+                # if we reach the end of a chunk list, make the multi-insert statement a single
+                # query by swapping the last comma to a semi-colon
                 insert_rows[-1] = insert_rows[-1][::-1].replace(",", ";", 1)[::-1]
         else:
             for row in vals:
@@ -539,8 +554,9 @@ class Runner:
     def run(self):
         sql_inserts = []
         random.seed(os.urandom(4))
+        _has_timestamp = any("timestamp" in s.values() for s in self.schema.values())
         for i in range(1, self.args.num + 1):
-            row = self.make_row(self.schema, i)
+            row = self.make_row(self.schema, i, _has_timestamp)
             sql_inserts.append(row)
         vals = [",".join(str(v) for v in d.values()) for d in sql_inserts]
         match args.filetype:

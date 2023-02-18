@@ -7,13 +7,14 @@ Ever want to quickly create millions of rows of random data for a database, with
 ## Usage
 
 ```shell
-usage: create_entries.py [-h] [--extended-help] [-c] [-d] [--drop-table] [--force] [-f {csv,mysql,postgresql,sqlserver}] [--generate-dates] [-g] [-i INPUT] [-n NUM] [-o OUTPUT]
-                         [-r] [-t TABLE] [--validate VALIDATE]
+usage: create_entries.py [-h] [--extended-help] [-c] [--country {au,de,fr,ke,jp,mx,ua,uk,us}] [-d] [--drop-table] [--force] [-f {csv,mysql,postgresql,sqlserver}] [--generate-dates] [-g] [-i INPUT] [-n NUM] [-o OUTPUT] [-r] [-t TABLE] [--validate VALIDATE]
 
 options:
   -h, --help            show this help message and exit
   --extended-help       Print extended help
   -c, --chunk           Chunk SQL INSERT statements
+  --country {au,de,fr,ke,jp,mx,ua,uk,us}
+                        The country's phone number structure to use if generating phone numbers
   -d, --debug           Print tracebacks for errors
   --drop-table          WARNING: DESTRUCTIVE - use DROP TABLE with generation
   --force               WARNING: DESTRUCTIVE - overwrite any files
@@ -63,6 +64,9 @@ GenSQL expects a JSON input schema, of the format:
 * This uses a C library to perform random shuffles. There are no external libraries, so as long as you have a reasonably new compiler, `make` should work for you.
 * `--force` and `--drop-table` have warnings for a reason. If you run a query with `DROP TABLE IF EXISTS`, please be sure of what you're doing.
 * `--random` allows for TEXT and JSON columns to have varying amounts of length, which may or may not matter to you. It will cause a ~10% slowdown. If not selected, a deterministic 20% of the rows in these columns will have a longer length than the rest. If this also bothers you, change DEFAULT_VARYING_LENGTH to `False`.
+* `--generate-dates` takes practically the same amount of time, or slightly longer, than just having them generated on-demand. It's useful if you want to have the same set of datetimes for a series of tables, although their actual ordering for row generation will remain random.
+* Using a column of name `phone` will generate realistic - to the best of my knowledge - phone numbers for a given country (very limited set). It's currently non-optimized for performance, and thus incurs a ~40% slowdown over the baseline. A solution in C may or may not speed things up, as it's not that performing `random.shuffle()` on a 10-digit number is slow, it's that doing so `n` times is a lot of function calls. Inlining C functions in Python [does exist](https://github.com/ssize-t/inlinec), but the non-caching of its compilation would probably negate any savings.
+* Similarly, a column of name `email` will generate realistic email addresses (all with `.com` TLD), and will incur a ~40% slowdown over the baseline.
 
 ### Loading data
 
@@ -119,6 +123,18 @@ mysql -h 127.0.0.1 -usgarland -ppassword test -e   0.02s user 0.01s system 0% cp
 ```
 
 Or, in terms of ratios, using chunking is approximately 3x as fast as the baseline, while loading a CSV is approximately 4x as fast as the baseline.
+
+```
+# baseline
+❯ time mysql -h localhost -usgarland -ppassword test < test.sql
+mysql -h localhost -usgarland -ppassword test < test.sql  32.75s user 10.90s system 14% cpu 4:55.91 total
+# no unique checks
+❯ time mysql -h localhost -usgarland -ppassword test < test.sql
+mysql -h localhost -usgarland -ppassword test < test.sql  25.11s user 8.67s system 14% cpu 3:48.38 total
+# no unique checks, single insert, 1 gb buffer size
+❯ time mysql -h localhost -usgarland -ppassword --max-allowed-packet=1073741824 test < test.sql
+mysql -h localhost -usgarland -ppassword --max-allowed-packet=1073741824 test  10.64s user 0.91s system 7% cpu 2:28.29 total
+```
 
 ## Benchmarks
 
@@ -184,8 +200,8 @@ python3.11 create_entries.py -i full.json -n 1000000 --force --drop-table -o   4
 
 ## TODO
 
-* Support other SQL varieties, as well as CSV and TXT.
-* Add more column data sources, like addresses, phone numbers, and email addresses.
+* Support other SQL varieties.
+* Add more column data sources.
 * Create tests.
 * Come up with a coherent exception handling mechanism.
 * Add logging, maybe.
