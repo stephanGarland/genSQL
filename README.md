@@ -7,12 +7,12 @@ Ever want to quickly create millions of rows of random data for a database, with
 ## Usage
 
 ```shell
-usage: create_entries.py [-h] [--extended-help] [-c] [--country {au,de,fr,ke,jp,mx,ua,uk,us}] [-d] [--drop-table] [--force] [-f {csv,mysql,postgresql,sqlserver}] [--generate-dates] [-g] [-i INPUT] [-n NUM] [-o OUTPUT] [-r] [-t TABLE] [--validate VALIDATE]
+usage: create_entries.py [-h] [--extended-help] [--country {au,de,fr,ke,jp,mx,ua,uk,us}] [-d] [--drop-table] [--force] [-f {csv,mysql,postgresql,sqlserver}] [--generate-dates]
+                         [-g] [-i INPUT] [--no-chunk] [-n NUM] [-o OUTPUT] [-r] [-t TABLE] [--validate VALIDATE]
 
 options:
   -h, --help            show this help message and exit
   --extended-help       Print extended help
-  -c, --chunk           Chunk SQL INSERT statements
   --country {au,de,fr,ke,jp,mx,ua,uk,us}
                         The country's phone number structure to use if generating phone numbers
   -d, --debug           Print tracebacks for errors
@@ -25,6 +25,7 @@ options:
                         Generate a skeleton input JSON schema
   -i INPUT, --input INPUT
                         Input schema (JSON)
+  --no-chunk            Do not chunk SQL INSERT statements
   -n NUM, --num NUM     The number of rows to generate
   -o OUTPUT, --output OUTPUT
                         Output filename
@@ -65,6 +66,9 @@ GenSQL expects a JSON input schema, of the format:
 * `--force` and `--drop-table` have warnings for a reason. If you run a query with `DROP TABLE IF EXISTS`, please be sure of what you're doing.
 * `--random` allows for TEXT and JSON columns to have varying amounts of length, which may or may not matter to you. It will cause a ~10% slowdown. If not selected, a deterministic 20% of the rows in these columns will have a longer length than the rest. If this also bothers you, change DEFAULT_VARYING_LENGTH to `False`.
 * `--generate-dates` takes practically the same amount of time, or slightly longer, than just having them generated on-demand. It's useful if you want to have the same set of datetimes for a series of tables, although their actual ordering for row generation will remain random.
+* Any column with `id` in its name will by default be assumed to be an integer type, and will have integers generated for it. You can provide hints to disable this, or to enable it for columns without `id` in their names, by using `is_id: {true, false}` in your schema.
+* To have an empty JSON array be set as the default value for a JSON column, use the default value `array()`.
+* To have the current datetime statically defined as the default value for a TIMESTAMP column, use the default value `static_now()`. To have the column's default automatically update the timestamp, use the default value `now()`.
 * Using a column of name `phone` will generate realistic - to the best of my knowledge - phone numbers for a given country (very limited set). It's currently non-optimized for performance, and thus incurs a ~40% slowdown over the baseline. A solution in C may or may not speed things up, as it's not that performing `random.shuffle()` on a 10-digit number is slow, it's that doing so `n` times is a lot of function calls. Inlining C functions in Python [does exist](https://github.com/ssize-t/inlinec), but the non-caching of its compilation would probably negate any savings.
 * Similarly, a column of name `email` will generate realistic email addresses (all with `.com` TLD), and will incur a ~40% slowdown over the baseline.
 
@@ -103,7 +107,7 @@ However, if you don't have access to the host, there are some tricks GenSQL has 
 * Disabling unique checks
   * Normally, the SQL engine will check that any columns declaring `UNIQUE` constraints do in fact meet that constraint. With this disabled, repetitive `INSERT` statements are much faster, with the obvious risk of violating the constraint. For nonsense data that has been created with unique elements, this is safe to temporarily disable.
 * Multi-INSERT statements
-  * Normally, an `INSERT` statement might look something like `INSERT INTO $TABLE (col_1, col_2) VALUES (row_1, row_2);` Instead, they can be written like `INSERT INTO $TABLE (col_1, col_2) VALUES (row_1, row_2), (row_3, row_4),` with `n` tuples of row data. By default, `mysqld` (the server) is limited to a 64 MiB packet size, and `mysql` (the client) to a 16 MiB packet size. Both of these can be altered up to 1 GiB, but the server side may not be accessible to everyone, so GenSQL limits itself to a 10,000 row chunk size, which should comfortably fit under the server limit. For the client, you'll need to pass `--max-allowed-packet=67108864` as an arg.
+  * Normally, an `INSERT` statement might look something like `INSERT INTO $TABLE (col_1, col_2) VALUES (row_1, row_2);` Instead, they can be written like `INSERT INTO $TABLE (col_1, col_2) VALUES (row_1, row_2), (row_3, row_4),` with `n` tuples of row data. By default, `mysqld` (the server) is limited to a 64 MiB packet size, and `mysql` (the client) to a 16 MiB packet size. Both of these can be altered up to 1 GiB, but the server side may not be accessible to everyone, so GenSQL limits itself to a 10,000 row chunk size, which should comfortably fit under the server limit. For the client, you'll need to pass `--max-allowed-packet=67108864` as an arg. If you don't want this behavior, you can use `--no-chunk` when creating the data.
 
 
 Testing with inserting 100,000 rows (DB is backed by spinning disks):
