@@ -2,8 +2,8 @@
     "user_id": {
         "type": "bigint unsigned",
         "nullable": "false",
-        "auto increment": "true",
-        "primary key": "true"
+        "auto_increment": "true",
+        "primary_key": "true"
     },
     "first_name": {
         "type": "varchar",

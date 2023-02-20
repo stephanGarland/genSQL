@@ -3,8 +3,8 @@
     "user_id": {
         "type": "bigint unsigned",
         "nullable": "false",
-        "auto increment": "true",
-        "primary key": "true"
+        "auto_increment": "true",
+        "primary_key": "true"
     },
     "full_name": {
         "type": "varchar",
@@ -13,6 +13,7 @@
     },
     "external_id": {
         "type": "bigint unsigned",
+        "is_id": "false",
         "nullable": "false",
         "unique": "true",
         "default": "0"
