@@ -3,19 +3,21 @@
     "user_id": {
         "type": "bigint unsigned",
         "nullable": "false",
-        "auto increment": "true",
-        "primary key": "true"
+        "auto_increment": "true",
+        "primary_key": "true"
     },
     "email": {
         "type": "varchar",
         "width": "255",
         "nullable": "true"
     },
-    "external_id": {
-        "type": "bigint unsigned",
-        "nullable": "false",
-        "unique": "true",
-        "default": "0"
+    "foo_dec": {
+        "type": "decimal",
+        "nullable": "false"
+    },
+    "bar_dbl": {
+        "type": "double",
+        "nullable": "true"
     },
     "last_modified": {
         "type": "timestamp",
