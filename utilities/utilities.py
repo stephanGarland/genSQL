@@ -69,9 +69,6 @@ class Args:
             help="Print extended help",
         )
         parser.add_argument(
-            "-c", "--chunk", action="store_true", help="Chunk SQL INSERT statements"
-        )
-        parser.add_argument(
             "--country",
             choices=["au", "de", "fr", "ke", "jp", "mx", "ua", "uk", "us"],
             default="us",
@@ -113,6 +110,12 @@ class Args:
         )
         parser.add_argument("-i", "--input", help="Input schema (JSON)")
         parser.add_argument(
+            "--no-chunk",
+            action="store_true",
+            dest="no_chunk",
+            help="Do not chunk SQL INSERT statements",
+        )
+        parser.add_argument(
             "-n", "--num", type=int, default=1000, help="The number of rows to generate"
         )
         parser.add_argument("-o", "--output", help="Output filename")
@@ -137,8 +140,8 @@ class Help:
                 "user_id": {
                     "type": "bigint unsigned",
                     "nullable": "false",
-                    "auto increment": "true",
-                    "primary key": "true"
+                    "auto_increment": "true",
+                    "primary_key": "true"
                 },
                 "full_name": {
                     "type": "varchar",
@@ -153,8 +156,8 @@ class Help:
                 },
                 "last_modified": {
                     "type": "timestamp",
-                    "nullable": "true",
-                    "default": "null"
+                    "nullable": "false",
+                    "default": "now()"
                 }
             }
         """
