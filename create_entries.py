@@ -101,11 +101,11 @@ class Generator:
             col_type = v.get("type")
             col_width = v.get("width")
             col_nullable = self.utils.strtobool(v.get("nullable"))
-            col_autoinc = self.utils.strtobool(v.get("auto increment"))
+            col_autoinc = self.utils.strtobool(v.get("auto_increment"))
             col_default = v.get("default")
             col_invisible = self.utils.strtobool(v.get("invisible"))
             col_max_length = v.get("max_length")
-            col_pk = self.utils.strtobool(v.get("primary key"))
+            col_pk = self.utils.strtobool(v.get("primary_key"))
             col_unique = self.utils.strtobool(v.get("unique"))
             if "int" in col_type:
                 if "unsigned" in col_type:
@@ -147,6 +147,20 @@ class Generator:
                     v,
                     f"column type `{col_type}` is not supported",
                 )
+            if col_default == "array()" and not col_type == "json":
+                _add_error(
+                    errors,
+                    (k, "default"),
+                    v,
+                    f"array is not a valid default value for column `{k}` of type `{col_type}`",
+                )
+            if col_default in ["now()", "static_now()"] and not col_type == "timestamp":
+                _add_error(
+                    errors,
+                    (k, "default"),
+                    v,
+                    f"{col_default} is not a valid default value for column `{k}` of type `{col_type}`",
+                )
             if col_width and "char" not in col_type:
                 _add_error(
                     errors,
@@ -157,9 +171,9 @@ class Generator:
             if col_autoinc and "int" not in col_type:
                 _add_error(
                     errors,
-                    (k, "auto increment"),
+                    (k, "auto_increment"),
                     v,
-                    f"auto increment is not a valid option for column `{k}` of type `{col_type}`",
+                    f"auto_increment is not a valid option for column `{k}` of type `{col_type}`",
                 )
             if col_autoinc and args.num > col_max_val:
                 _add_error(
@@ -181,13 +195,6 @@ class Generator:
                     (k, "nullable"),
                     v,
                     f"column `{k}` is designated as a primary key and cannot be nullable",
-                )
-            if "text" in col_type and col_default:
-                _add_error(
-                    errors,
-                    (k, "default"),
-                    v,
-                    f"default is not a valid option for column `{k}` of type `{col_type}`",
                 )
             try:
                 if col_type == "char" and not 0 < int(col_width) < 2**8:
@@ -229,7 +236,7 @@ class Generator:
         if len(pks) > 1:
             _add_error(
                 errors,
-                (k, "primary key"),
+                (k, "primary_key"),
                 v,
                 f"cannot specify more than one primary key; got {[x for x in pks]}",
             )
@@ -277,15 +284,12 @@ class Generator:
             msg += f"DROP TABLE IF EXISTS `{tbl_name}`;\n"
         msg += f"CREATE TABLE `{tbl_name}` (\n"
         for col, col_attributes in schema.items():
-            # this may expand in the future
-            if col in ["phone"]:
-                cols[col]["create_ranged_arr"] = True
             col_opts = []
             for k, v in col_attributes.items():
                 match k:
                     case "type":
                         cols[col]["type"] = v
-                    case "auto increment":
+                    case "auto_increment":
                         cols[col]["auto_inc"] = self.utils.strtobool(v)
                     case "default":
                         cols[col]["default"] = v
@@ -293,11 +297,13 @@ class Generator:
                         cols[col]["invisible"] = self.utils.strtobool(v)
                     case "width":
                         cols[col]["width"] = v
+                    case "is_id":
+                        pass
                     case "max_length":
                         pass
                     case "nullable":
                         cols[col]["nullable"] = self.utils.strtobool(v)
-                    case "primary key":
+                    case "primary_key":
                         cols[col]["pk"] = True
                         pk = col
                     case "unique":
@@ -307,15 +313,30 @@ class Generator:
                         raise ValueError(f"column attribute {k} is invalid")
             if cols[col]["width"]:
                 cols[col]["type"] = f"{cols[col]['type']} ({cols[col]['width']})"
-            if cols.get(col, {}).get("nullable"):
+            if self.utils.strtobool(col_attributes.get("nullable", "true")):
                 col_opts.append("NULL")
             else:
                 col_opts.append("NOT NULL")
-            if cols.get(col, {}).get("default"):
-                col_opts.append(f"DEFAULT {cols[col]['default'].upper()}")
-            if cols.get(col, {}).get("invisible"):
+            col_default = col_attributes.get("default")
+            # this is here as an early exit, not for any kind of type checking
+            if col_default:
+                if col_default == "null":
+                    col_opts.append("DEFAULT NULL")
+                elif col_default == "array()":
+                    col_opts.append("DEFAULT (JSON_ARRAY())")
+                elif col_default.isdigit():
+                    col_opts.append(f"DEFAULT {col_default}")
+                elif cols[col]["type"] in ["blob", "geometry", "json", "text"]:
+                    col_opts.append(f"DEFAULT ({col_default})")
+                elif col_default == "now()":
+                    col_opts.append("DEFAULT NOW() ON UPDATE NOW()")
+                elif col_default == "static_now()":
+                    col_opts.append("DEFAULT NOW()")
+                else:
+                    col_opts.append(f"DEFAULT {col_default}")
+            if col_attributes.get("invisible"):
                 col_opts.append("INVISIBLE")
-            if cols.get(col, {}).get("auto_inc"):
+            if col_attributes.get("auto_increment"):
                 col_opts.append("AUTO_INCREMENT")
                 auto_inc_exists = True
 
@@ -323,7 +344,7 @@ class Generator:
                 col
             ] = f"  `{col}` {cols[col]['type']}{' ' + ' '.join(col_opts) if col_opts else ''},"
         msg += "\n".join(col_defs.values())
-        msg += f"\n  PRIMARY KEY (`{pk}`),\n"
+        msg += f"\n  PRIMARY KEY (`{pk}`){',' if uniques else ''}\n"
         for i, u in enumerate(uniques, 1):
             msg += f"  UNIQUE KEY {u} (`{u}`)"
             if not i == len(uniques) and len(uniques) > 1:
@@ -347,21 +368,27 @@ class Runner:
 
         # exceeding auto_increment capacity is checked at schema validation, but since
         # the user can specify --validate without passing --num, uniques have to be checked here
-        id_cols = {k: v for k, v in self.tbl_cols.items() if "id" in k}
-        for k, v in id_cols.items():
+        numeric_cols = {
+            k: v
+            for k, v in self.tbl_cols.items()
+            if "int" in v["type"] or v["type"] in ["decimal", "double", "int"]
+        }
+        for k, v in numeric_cols.items():
             if "unsigned" in v["type"]:
                 col_max_val = MYSQL_INT_MIN_MAX[
                     f"MYSQL_MAX_{v['type'].upper().split()[0]}_UNSIGNED"
                 ]
+            elif v["type"] in ["decimal", "double"]:
+                col_max_val = float("inf")
             else:
                 col_max_val = MYSQL_INT_MIN_MAX[
                     f"MYSQL_MAX_{v['type'].upper().split()[0]}_SIGNED"
                 ]
-
             if v.get("auto_inc"):
                 _has_monotonic = True
             if v.get("unique"):
                 _has_unique = True
+                self.rand_max_id = self.args.num
                 if self.args.num > col_max_val:
                     raise TooManyRowsError(k, self.args.num, col_max_val) from None
             # if uniquity isn't required, and the requested number of rows is greater
@@ -414,16 +441,31 @@ class Runner:
         if has_timestamp:
             date = self.sample(self.dates, self.args.num)
         for col, opts in schema.items():
-            if "id" in col:
-                if schema.get(col, {}).get("auto increment"):
-                    row[col] = self.monotonic_id.allocate()
-                elif schema.get(col, {}).get("unique"):
+            if "int" in opts.get("type"):
+                if opts.get("auto_increment"):
+                    # may or may not just remove this, for now pass is fine
+                    pass
+                    # row[col] = self.monotonic_id.allocate()
+                elif opts.get("unique"):
                     row[col] = self.unique_id.allocate()
                 else:
                     row[col] = self.random_id.allocate()
-
                     # these are appended to the right of the deque, so they won't be immediately repeated
                     self.random_id.release(row[col])
+
+            elif opts.get("type") in ["decimal", "double"]:
+                # TODO: Figure out why this fails with unique checks
+                if opts.get("unique"):
+                    whole = self.unique_id.allocate()
+                    fractional = str(idx)[0]
+                    row[col] = f"'{whole}.{fractional}{whole}'"
+                    self.unique_id.release(whole)
+                else:
+                    whole = self.random_id.allocate()
+                    fractional = str(idx)[0]
+                    row[col] = f"'{whole}.{fractional}{whole}'"
+                    self.random_id.release(whole)
+
             elif col == "first_name":
                 random_first = self.sample(self.first_names, self.num_rows_first_names)
                 first_name = f"{random_first}".replace("'", "''")
@@ -440,7 +482,7 @@ class Runner:
                 full_name = f"{random_last}, {random_first}".replace("'", "''")
                 row[col] = f"'{full_name}'"
 
-            elif schema[col]["type"] == "json":
+            elif opts.get("type") == "json":
                 json_dict = {}
                 json_keys = self.sample(
                     self.wordlist, self.num_rows_wordlist, JSON_OBJ_MAX_KEYS
@@ -450,16 +492,14 @@ class Runner:
                     self.wordlist, self.num_rows_wordlist, JSON_OBJ_MAX_VALS + 1
                 )
                 json_dict[json_keys.pop()] = json_vals.pop()
-                max_rows_pct = float(
-                    schema.get(col, {}).get("max_length", DEFAULT_MAX_FIELD_PCT)
-                )
+                max_rows_pct = float(opts.get("max_length", DEFAULT_MAX_FIELD_PCT))
                 if self.args.random:
                     json_arr_len = ceil(
                         random.random() * (JSON_OBJ_MAX_VALS - 1) * max_rows_pct
                     )
                 else:
                     json_arr_len = ceil((JSON_OBJ_MAX_VALS - 1) * max_rows_pct)
-                # make 20% of the JSON objects nested with a list object of length
+                # make 20% of the JSON objects nested with a list object of length defined above
                 if not idx % 5:
                     key = json_keys.pop()
                     json_dict[key] = {}
@@ -474,21 +514,22 @@ class Runner:
                 except UnboundLocalError:
                     email_domain = self.sample(self.wordlist, self.num_rows_wordlist)
                 try:
-                    email_local = random_first
+                    email_local = f"{random_first}.{random_last}"
                 except UnboundLocalError:
-                    email_local = self.sample(
+                    email_first = self.sample(
                         self.first_names, self.num_rows_first_names
                     )
-                row[col] = f"'{email_local.lower()}@{email_domain}.com'"
+                    email_last = self.sample(self.last_names, self.num_rows_last_names)
+                    email_local = f"{email_first}.{email_last}"
+                email_local = email_local.lower().replace("'", "''")
+                row[col] = f"'{email_local}@{email_domain}.com'"
             elif col == "phone":
                 phone_digits = [str(x) for x in range(10)]
                 random.shuffle(phone_digits)
                 phone_str = "".join(phone_digits)
                 row[col] = f"'{PHONE_NUMBER[args.country](phone_str)}'"
             elif schema[col]["type"] == "text":
-                max_rows_pct = float(
-                    schema.get(col, {}).get("max_length", DEFAULT_MAX_FIELD_PCT)
-                )
+                max_rows_pct = float(opts.get("max_length", DEFAULT_MAX_FIELD_PCT))
                 # e.g. if max_rows_pct is 0.15, with 25 rows in lorem ipsum, we get a range of 1-4 rows
                 if DEFAULT_VARYING_LENGTH:
                     if self.args.random:
@@ -510,7 +551,7 @@ class Runner:
                 else:
                     row[col] = f"'{self.lorem_ipsum[0]}'"
 
-            elif schema[col]["type"] == "timestamp":
+            elif opts.get("type") == "timestamp":
                 row[col] = date
         return row
 
@@ -528,7 +569,7 @@ class Runner:
         insert_rows.append("SET autocommit=0;\n")
         insert_rows.append("SET unique_checks=0;\n")
         insert_rows.append(f"LOCK TABLES `{self.tbl_name}` WRITE;\n")
-        if self.args.chunk:
+        if not self.args.no_chunk:
             for i in range(0, len(vals), DEFAULT_INSERT_CHUNK_SIZE):
                 insert_rows.append(
                     f"INSERT INTO `{self.tbl_name}` (`{'`, `'.join(self.tbl_cols)}`) VALUES\n"
@@ -617,12 +658,13 @@ if __name__ == "__main__":
             raise OverwriteFileError(filename) from None
         except PermissionError:
             raise OutputFilePermissionError(filename) from None
-    if args.chunk and "sql" not in args.filetype:
-        print(f"WARNING: --chunk has no effect on {args.filetype} output, ignoring")
     tbl_name = args.table or "gensql"
     schema_dict = g.parse_schema()
     schema_dict = utils.lowercase_schema(schema_dict)
     g.validate_schema(schema_dict)
     tbl_create, tbl_cols = g.mysql(schema_dict, tbl_name, args.drop_table)
+    auto_inc_cols = [x for x in tbl_cols.keys() if tbl_cols[x].get("auto_inc")]
+    for x in auto_inc_cols:
+        del tbl_cols[x]
     r = Runner(args, schema_dict, tbl_name, tbl_cols, tbl_create)
     r.run()
