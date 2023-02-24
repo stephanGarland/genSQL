@@ -7,8 +7,7 @@ Ever want to quickly create millions of rows of random data for a database, with
 ## Usage
 
 ```shell
-usage: create_entries.py [-h] [--extended-help] [--country {au,de,fr,ke,jp,mx,ua,uk,us}] [-d] [--drop-table] [--force] [-f {csv,mysql,postgresql,sqlserver}] [--generate-dates]
-                         [-g] [-i INPUT] [--no-chunk] [-n NUM] [-o OUTPUT] [-r] [-t TABLE] [--validate VALIDATE]
+usage: gensql.py [-h] [--extended-help] [--country {au,de,fr,ke,jp,mx,ua,uk,us}] [-d] [--drop-table] [--force] [-f {csv,mysql,postgresql,sqlserver}] [--generate-dates] [-g] [-i INPUT] [--no-chunk] [-n NUM] [-o OUTPUT] [-r] [-t TABLE] [--validate VALIDATE]
 
 options:
   -h, --help            show this help message and exit
@@ -51,7 +50,7 @@ GenSQL expects a JSON input schema, of the format:
             }
 ```
 2. If necessary, build the C library with the included Makefile. Otherwise, rename the included file for your platform to `fast_shuffle.so` (or change the name ctypes is looking for, your choice).
-3. Run GenSQL, example `python3 create_entries.py -i $YOUR_SCHEMA.json -n 10000 -f mysql`.
+3. Run GenSQL, example `python3 gensql.py -i $YOUR_SCHEMA.json -n 10000 -f mysql`.
 
 ## Requirements
 
@@ -151,21 +150,21 @@ Testing the creation of the standard 4-column schema, as well as an extended 8-c
 #### Python 3.11
 
 ```shell
-❯ time python3.11 create_entries.py -n 1000000 --force --drop-table
-python3.11 create_entries.py -n 1000000 --force --drop-table  4.56s user 0.16s system 99% cpu 4.744 total
+❯ time python3.11 gensql.py -n 1000000 --force --drop-table
+python3.11 gensql.py -n 1000000 --force --drop-table  4.56s user 0.16s system 99% cpu 4.744 total
 
-❯ time python3.11 create_entries.py -i full.json -n 1000000 --force --drop-table
-python3.11 create_entries.py -i full.json -n 1000000 --force --drop-table  12.70s user 1.13s system 98% cpu 14.089 total
+❯ time python3.11 gensql.py -i full.json -n 1000000 --force --drop-table
+python3.11 gensql.py -i full.json -n 1000000 --force --drop-table  12.70s user 1.13s system 98% cpu 14.089 total
 ```
 
 #### Python 3.10
 
 ```shell
-❯ time python3 create_entries.py -n 1000000 --force --drop-table
-python3 create_entries.py -n 1000000 --force --drop-table  5.27s user 0.17s system 99% cpu 5.442 total
+❯ time python3 gensql.py -n 1000000 --force --drop-table
+python3 gensql.py -n 1000000 --force --drop-table  5.27s user 0.17s system 99% cpu 5.442 total
 
-❯ time python3 create_entries.py -i full.json -n 1000000 --force --drop-table
-python3 create_entries.py -i full.json -n 1000000 --force --drop-table  16.23s user 0.54s system 99% cpu 16.840 total
+❯ time python3 gensql.py -i full.json -n 1000000 --force --drop-table
+python3 gensql.py -i full.json -n 1000000 --force --drop-table  16.23s user 0.54s system 99% cpu 16.840 total
 ```
 
 ### Intel i9  Macbook Pro
@@ -173,21 +172,21 @@ python3 create_entries.py -i full.json -n 1000000 --force --drop-table  16.23s u
 #### Python 3.11
 
 ```shell
-❯ time python3.11 create_entries.py -n 1000000 --force --drop-table
-python3.11 create_entries.py -n 1000000 --force --drop-table  8.51s user 0.47s system 99% cpu 9.023 total
+❯ time python3.11 gensql.py -n 1000000 --force --drop-table
+python3.11 gensql.py -n 1000000 --force --drop-table  8.51s user 0.47s system 99% cpu 9.023 total
 
-❯ time python3.11 create_entries.py -i full.json -n 1000000 --force --drop-table
-python3.11 create_entries.py -i full.json -n 1000000 --force --drop-table  25.68s user 1.60s system 99% cpu 27.395 total
+❯ time python3.11 gensql.py -i full.json -n 1000000 --force --drop-table
+python3.11 gensql.py -i full.json -n 1000000 --force --drop-table  25.68s user 1.60s system 99% cpu 27.395 total
 ```
 
 #### Python 3.10
 
 ```shell
-❯ time python3 create_entries.py -n 1000000 --force --drop-table
-python3 create_entries.py -n 1000000 --force --drop-table  9.88s user 0.46s system 99% cpu 10.405 total
+❯ time python3 gensql.py -n 1000000 --force --drop-table
+python3 gensql.py -n 1000000 --force --drop-table  9.88s user 0.46s system 99% cpu 10.405 total
 
-❯ time python3 create_entries.py -i full.json -n 1000000 --force --drop-table
-python3 create_entries.py -i full.json -n 1000000 --force --drop-table  32.60s user 1.66s system 99% cpu 34.364 total
+❯ time python3 gensql.py -i full.json -n 1000000 --force --drop-table
+python3 gensql.py -i full.json -n 1000000 --force --drop-table  32.60s user 1.66s system 99% cpu 34.364 total
 ```
 
 ### Xeon E5-2650v2 server
@@ -195,11 +194,11 @@ python3 create_entries.py -i full.json -n 1000000 --force --drop-table  32.60s u
 A ramdisk was used to eliminate the spinning disk overhead for the server.
 
 ```shell
-❯ time python3.11 create_entries.py -n 1000000 --force --drop-table -o /mnt/ramdisk/test.sql
-python3.11 create_entries.py -n 1000000 --force --drop-table -o   15.35s user 0.85s system 98% cpu 16.377 total
+❯ time python3.11 gensql.py -n 1000000 --force --drop-table -o /mnt/ramdisk/test.sql
+python3.11 gensql.py -n 1000000 --force --drop-table -o   15.35s user 0.85s system 98% cpu 16.377 total
 
-❯ time python3.11 create_entries.py -i full.json -n 1000000 --force --drop-table -o /mnt/ramdisk/test.sql
-python3.11 create_entries.py -i full.json -n 1000000 --force --drop-table -o   45.26s user 3.79s system 99% cpu 49.072 total
+❯ time python3.11 gensql.py -i full.json -n 1000000 --force --drop-table -o /mnt/ramdisk/test.sql
+python3.11 gensql.py -i full.json -n 1000000 --force --drop-table -o   45.26s user 3.79s system 99% cpu 49.072 total
 ```
 
 ## TODO
