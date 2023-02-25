@@ -70,9 +70,8 @@ class Args:
         )
         parser.add_argument(
             "--country",
-            choices=["au", "de", "fr", "ke", "jp", "mx", "ua", "uk", "us"],
-            default="us",
-            help="The country's phone number structure to use if generating phone numbers",
+            choices=["random", "au", "de", "fr", "gb", "ke", "jp", "mx", "ua", "us"],
+            help="A specific country (or random) to use for cities, phone numbers, etc.",
         )
         parser.add_argument(
             "-d", "--debug", action="store_true", help="Print tracebacks for errors"
