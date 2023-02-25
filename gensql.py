@@ -1,4 +1,5 @@
 from pathlib import PurePath
+from textwrap import dedent
 import sys
 
 from gensql.generator import Generator
@@ -20,9 +21,10 @@ if __name__ == "__main__":
     if not args.debug:
         sys.tracebacklimit = 0
     if args.extended_help:
-        h.schema()
+        h.extended_help()
     elif args.generate:
-        skeleton = h.make_skeleton()
+        # due to the multi-line string output, there's a leading newline
+        skeleton = dedent(h.make_skeleton())[1:]
         try:
             try:
                 filename = PurePath(args.output).stem
@@ -59,7 +61,7 @@ if __name__ == "__main__":
             raise OverwriteFileError(filename) from None
         except PermissionError:
             raise OutputFilePermissionError(filename) from None
-    tbl_name = args.table or "gensql"
+    tbl_name = args.table or args.output or "gensql"
     schema_dict = g.parse_schema()
     schema_dict = utils.lowercase_schema(schema_dict)
     g.validate_schema(schema_dict)

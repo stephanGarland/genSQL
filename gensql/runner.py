@@ -14,7 +14,6 @@ from utilities.constants import (
     COUNTRY_CODES,
     DEFAULT_INSERT_CHUNK_SIZE,
     DEFAULT_MAX_FIELD_PCT,
-    DEFAULT_VARYING_LENGTH,
     JSON_OBJ_MAX_KEYS,
     JSON_OBJ_MAX_VALS,
     MYSQL_INT_MIN_MAX,
@@ -52,6 +51,7 @@ class Runner:
                     for k, v in CITIES_COUNTRIES.items()
                     if v in [x for x in COUNTRY_CODES.values() if x in valid_countries]
                 }
+            self.num_rows_cities = len(self.cities)
 
         _has_monotonic = False
         _has_unique = False
@@ -100,21 +100,26 @@ class Runner:
         except FileNotFoundError:
             self.dates = Generator(self.args).make_dates(self.args.num)
         try:
-            with open("content/first_names.txt", "r") as f:
-                self.first_names = f.read().splitlines()
-            with open("content/last_names.txt", "r") as f:
-                self.last_names = f.read().splitlines()
-            with open("content/wordlist.txt", "r") as f:
-                self.wordlist = f.read().splitlines()
-            with open("content/lorem_ipsum.txt", "r") as f:
-                self.lorem_ipsum = f.read().splitlines()
+            if "first_name" in self.tbl_cols or "full_name" in self.tbl_cols:
+                with open("content/first_names.txt", "r") as f:
+                    self.first_names = f.read().splitlines()
+                self.num_rows_first_names = len(self.first_names)
+            if "last_name" in self.tbl_cols or "full_name" in self.tbl_cols:
+                with open("content/last_names.txt", "r") as f:
+                    self.last_names = f.read().splitlines()
+                self.num_rows_last_names = len(self.last_names)
+            if "email" in self.tbl_cols or [
+                "json" in x.values() for x in self.tbl_cols.values()
+            ]:
+                with open("content/wordlist.txt", "r") as f:
+                    self.wordlist = f.read().splitlines()
+                self.num_rows_wordlist = len(self.wordlist)
+            if ["text" in x.values() for x in self.tbl_cols.values()]:
+                with open("content/lorem_ipsum.txt", "r") as f:
+                    self.lorem_ipsum = f.read().splitlines()
+                self.num_rows_lorem_ipsum = len(self.lorem_ipsum)
         except FileNotFoundError as e:
             raise FileNotFoundError(f"unable to load necessary content\n{e}")
-        self.num_rows_cities = len(self.cities)
-        self.num_rows_first_names = len(self.first_names)
-        self.num_rows_last_names = len(self.last_names)
-        self.num_rows_lorem_ipsum = len(self.lorem_ipsum)
-        self.num_rows_wordlist = len(self.wordlist)
 
     def sample(
         self, iterable: list, num_rows: int, num_samples: int = 1
@@ -244,7 +249,7 @@ class Runner:
             elif schema[col]["type"] == "text":
                 max_rows_pct = float(opts.get("max_length", DEFAULT_MAX_FIELD_PCT))
                 # e.g. if max_rows_pct is 0.15, with 25 rows in lorem ipsum, we get a range of 1-4 rows
-                if DEFAULT_VARYING_LENGTH:
+                if not self.args.fixed_length:
                     if self.args.random:
                         lorem_rows = ceil(
                             random.random() * self.num_rows_lorem_ipsum * max_rows_pct
