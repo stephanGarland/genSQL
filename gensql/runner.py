@@ -10,6 +10,8 @@ from exceptions.exceptions import (
     TooManyRowsError,
 )
 from utilities.constants import (
+    CITIES_COUNTRIES,
+    COUNTRY_CODES,
     DEFAULT_INSERT_CHUNK_SIZE,
     DEFAULT_MAX_FIELD_PCT,
     DEFAULT_VARYING_LENGTH,
@@ -26,6 +28,7 @@ class Runner:
     def __init__(self, args, schema, tbl_name, tbl_cols, tbl_create):
         self.allocator = utilities.Allocator
         self.args = args
+        self.cities = [k for k, v in CITIES_COUNTRIES.items() if v == COUNTRY_CODES[self.args.country]]
         self.schema = schema
         self.tbl_cols = tbl_cols
         self.tbl_create = tbl_create
@@ -87,6 +90,7 @@ class Runner:
                 self.lorem_ipsum = f.read().splitlines()
         except FileNotFoundError as e:
             raise FileNotFoundError(f"unable to load necessary content\n{e}")
+        self.num_rows_cities = len(self.cities)
         self.num_rows_first_names = len(self.first_names)
         self.num_rows_last_names = len(self.last_names)
         self.num_rows_lorem_ipsum = len(self.lorem_ipsum)
@@ -175,6 +179,8 @@ class Runner:
                     ]
                 row[col] = f"'{json.dumps(json_dict)}'"
 
+            elif col == "city":
+                row[col] = f"'{self.sample(self.cities, self.num_rows_cities)}'"
             elif col == "email":
                 try:
                     email_domain = json_vals.pop()
