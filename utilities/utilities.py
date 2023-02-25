@@ -95,6 +95,12 @@ class Args:
             help="Filetype to generate",
         )
         parser.add_argument(
+            "--fixed-length",
+            action="store_true",
+            dest="fixed_length",
+            help="Disable any variations in length for JSON arrays, text, etc.",
+        )
+        parser.add_argument(
             "--generate-dates",
             action="store_true",
             dest="dates",
@@ -115,16 +121,26 @@ class Args:
             help="Do not chunk SQL INSERT statements",
         )
         parser.add_argument(
-            "-n", "--num", type=int, default=1000, help="The number of rows to generate"
+            "-n",
+            "--num",
+            type=int,
+            default=1000,
+            help="The number of rows to generate - defaults to 1000",
         )
-        parser.add_argument("-o", "--output", help="Output filename")
+        parser.add_argument(
+            "-o", "--output", help="Output filename - defaults to gensql"
+        )
         parser.add_argument(
             "-r",
             "--random",
             action="store_true",
             help="Enable randomness on the length of some items",
         )
-        parser.add_argument("-t", "--table", help="Table name to generate SQL for")
+        parser.add_argument(
+            "-t",
+            "--table",
+            help="Table name to generate SQL for - defaults to the filename",
+        )
         parser.add_argument("--validate", help="Validate an input JSON schema")
         return parser.parse_args()
 
@@ -160,9 +176,9 @@ class Help:
                 }
             }
         """
-        return dedent(msg)
+        return msg
 
-    def schema(self):
+    def extended_help(self):
         msg = f"""
         GenSQL expects a JSON input schema, of the format:
 
@@ -193,7 +209,7 @@ class Help:
             * [var]char
                 * width
             * integers
-                * auto increment
+                * auto_increment
             * json, text
                 * max_length: float <0.01 - 1.00>
                   determines the maximum length of JSON arrays and TEXT columns
@@ -202,9 +218,22 @@ class Help:
             * all
                 * default
                 * invisible - NOTE: Only valid for MySQL
+                * is_id
+                    * provides hints to gensql on whether or not to create integers
+                      for a column if it cannot be automatically inferred
                 * nullable - NOTE: absence implies true
-                * primary key
+                * primary_key
                 * unique
+        Valid default values are:
+            * any constant
+            * array()
+                * creates a json array
+            * now()
+                * for a timestamp column, creates a default null value, and
+                  automatically updates with the current time if the row is updated
+            * static_now()
+                * for a timestamp column, creates a default value of the current time
+                  when the schema is loaded into a database
         e.g.
             {self.make_skeleton()}
         """
