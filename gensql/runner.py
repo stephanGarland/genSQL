@@ -1,5 +1,4 @@
 import json
-import itertools
 from math import ceil, floor
 from os import urandom
 import random
@@ -29,28 +28,31 @@ class Runner:
     def __init__(self, args, schema, tbl_name, tbl_cols, tbl_create):
         self.allocator = utilities.Allocator
         self.args = args
-        if self.args.country and not self.args.country == "random":
-            self.cities, self.countries = zip(
-                *itertools.compress(
-                    CITIES_COUNTRIES.items(),
-                    [
-                        v == COUNTRY_CODES[self.args.country]
-                        for v in CITIES_COUNTRIES.values()
-                    ],
-                )
-            )
-        elif self.args.country and self.args.country == "random":
-            self.cities = {
-                k: v
-                for k, v in CITIES_COUNTRIES.items()
-                if v
-                in [y for x, y in COUNTRY_CODES.items() if x in PHONE_NUMBERS.keys()]
-            }
-
         self.schema = schema
         self.tbl_cols = tbl_cols
         self.tbl_create = tbl_create
         self.tbl_name = tbl_name
+
+        # TODO: speed this up
+        if "country" in self.tbl_cols or "city" in self.tbl_cols:
+            if self.args.country and not self.args.country == "random":
+                self.cities = {
+                    k: v
+                    for k, v in CITIES_COUNTRIES.items()
+                    if v == COUNTRY_CODES[self.args.country]
+                }
+            elif self.args.country == "random" and not "phone" in self.tbl_cols:
+                self.cities = {k: v for k, v in CITIES_COUNTRIES.items()}
+            elif self.args.country == "random" and "phone" in self.tbl_cols:
+                valid_countries = {
+                    v for k, v in COUNTRY_CODES.items() if k in PHONE_NUMBERS.keys()
+                }
+                self.cities = {
+                    k: v
+                    for k, v in CITIES_COUNTRIES.items()
+                    if v in [x for x in COUNTRY_CODES.values() if x in valid_countries]
+                }
+
         _has_monotonic = False
         _has_unique = False
 
@@ -199,23 +201,26 @@ class Runner:
 
             elif col == "city":
                 if self.args.country and not self.args.country == "random":
-                    city = self.sample(self.cities, self.num_rows_cities).replace("'", "''")
+                    city = self.sample(
+                        list(self.cities.keys()), self.num_rows_cities
+                    ).replace("'", "''")
                 else:
-                    city = self.sample(list(self.cities.keys()), self.num_rows_cities).replace(
-                        "'", "''"
-                    )
+                    city = self.sample(
+                        list(self.cities.keys()), self.num_rows_cities
+                    ).replace("'", "''")
                 row[col] = f"'{city}'"
             elif col == "country":
                 if self.args.country and not self.args.country == "random":
-                    country = self.countries[0]
+                    country = list(self.cities.values())[0]
                 else:
                     try:
                         country = self.cities[city]
-                    except KeyError:
+                    except (KeyError, UnboundLocalError):
                         country = self.sample(
                             list(self.cities.values()), self.num_rows_cities
                         ).replace("'", "''")
                 row[col] = f"'{country}'"
+
             elif col == "email":
                 try:
                     email_domain = json_vals.pop()
