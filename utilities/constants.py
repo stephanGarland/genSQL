@@ -33,7 +33,7 @@ MYSQL_INT_MIN_MAX = {
     "MYSQL_MAX_BIGINT_UNSIGNED": ~-(2**64),
 }
 
-PHONE_NUMBER = {
+PHONE_NUMBERS = {
     "au": lambda x: f"+61 02 {x[0:4]} {x[5:9]}",
     "de": lambda x: f"+49 030 {x[0:6]}-{x[6:8]}",
     "fr": lambda x: f"+33 01 {x[0:2]} {x[2:4]} {x[4:6]} {x[6:8]}",

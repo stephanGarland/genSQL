@@ -1,4 +1,5 @@
 import json
+import itertools
 from math import ceil, floor
 from os import urandom
 import random
@@ -18,7 +19,7 @@ from utilities.constants import (
     JSON_OBJ_MAX_KEYS,
     JSON_OBJ_MAX_VALS,
     MYSQL_INT_MIN_MAX,
-    PHONE_NUMBER,
+    PHONE_NUMBERS,
 )
 from gensql.generator import Generator
 from utilities import utilities
@@ -28,7 +29,24 @@ class Runner:
     def __init__(self, args, schema, tbl_name, tbl_cols, tbl_create):
         self.allocator = utilities.Allocator
         self.args = args
-        self.cities = [k for k, v in CITIES_COUNTRIES.items() if v == COUNTRY_CODES[self.args.country]]
+        if self.args.country and not self.args.country == "random":
+            self.cities, self.countries = zip(
+                *itertools.compress(
+                    CITIES_COUNTRIES.items(),
+                    [
+                        v == COUNTRY_CODES[self.args.country]
+                        for v in CITIES_COUNTRIES.values()
+                    ],
+                )
+            )
+        elif self.args.country and self.args.country == "random":
+            self.cities = {
+                k: v
+                for k, v in CITIES_COUNTRIES.items()
+                if v
+                in [y for x, y in COUNTRY_CODES.items() if x in PHONE_NUMBERS.keys()]
+            }
+
         self.schema = schema
         self.tbl_cols = tbl_cols
         self.tbl_create = tbl_create
@@ -180,7 +198,24 @@ class Runner:
                 row[col] = f"'{json.dumps(json_dict)}'"
 
             elif col == "city":
-                row[col] = f"'{self.sample(self.cities, self.num_rows_cities)}'"
+                if self.args.country and not self.args.country == "random":
+                    city = self.sample(self.cities, self.num_rows_cities).replace("'", "''")
+                else:
+                    city = self.sample(list(self.cities.keys()), self.num_rows_cities).replace(
+                        "'", "''"
+                    )
+                row[col] = f"'{city}'"
+            elif col == "country":
+                if self.args.country and not self.args.country == "random":
+                    country = self.countries[0]
+                else:
+                    try:
+                        country = self.cities[city]
+                    except KeyError:
+                        country = self.sample(
+                            list(self.cities.values()), self.num_rows_cities
+                        ).replace("'", "''")
+                row[col] = f"'{country}'"
             elif col == "email":
                 try:
                     email_domain = json_vals.pop()
@@ -200,7 +235,7 @@ class Runner:
                 phone_digits = [str(x) for x in range(10)]
                 random.shuffle(phone_digits)
                 phone_str = "".join(phone_digits)
-                row[col] = f"'{PHONE_NUMBER[self.args.country](phone_str)}'"
+                row[col] = f"'{PHONE_NUMBERS[self.args.country](phone_str)}'"
             elif schema[col]["type"] == "text":
                 max_rows_pct = float(opts.get("max_length", DEFAULT_MAX_FIELD_PCT))
                 # e.g. if max_rows_pct is 0.15, with 25 rows in lorem ipsum, we get a range of 1-4 rows
