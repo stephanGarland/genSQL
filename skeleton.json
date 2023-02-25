@@ -1,4 +1,3 @@
-
 {
     "user_id": {
         "type": "bigint unsigned",
@@ -13,14 +12,13 @@
     },
     "external_id": {
         "type": "bigint unsigned",
-        "is_id": "false",
         "nullable": "false",
         "unique": "true",
         "default": "0"
     },
     "last_modified": {
         "type": "timestamp",
-        "nullable": "true",
-        "default": "null"
+        "nullable": "false",
+        "default": "now()"
     }
 }
