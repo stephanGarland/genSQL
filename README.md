@@ -7,30 +7,32 @@ Ever want to quickly create millions of rows of random data for a database, with
 ## Usage
 
 ```shell
-usage: gensql.py [-h] [--extended-help] [--country {au,de,fr,ke,jp,mx,ua,uk,us}] [-d] [--drop-table] [--force] [-f {csv,mysql,postgresql,sqlserver}] [--generate-dates] [-g] [-i INPUT] [--no-chunk] [-n NUM] [-o OUTPUT] [-r] [-t TABLE] [--validate VALIDATE]
+usage: gensql.py [-h] [--extended-help] [--country {random,au,de,fr,gb,ke,jp,mx,ua,us}] [-d] [--drop-table] [--force] [-f {csv,mysql,postgresql,sqlserver}] [--fixed-length]
+                 [--generate-dates] [-g] [-i INPUT] [--no-chunk] [-n NUM] [-o OUTPUT] [-r] [-t TABLE] [--validate VALIDATE]
 
 options:
   -h, --help            show this help message and exit
   --extended-help       Print extended help
-  --country {au,de,fr,ke,jp,mx,ua,uk,us}
-                        The country's phone number structure to use if generating phone numbers
+  --country {random,au,de,fr,gb,ke,jp,mx,ua,us}
+                        A specific country (or random) to use for cities, phone numbers, etc.
   -d, --debug           Print tracebacks for errors
   --drop-table          WARNING: DESTRUCTIVE - use DROP TABLE with generation
   --force               WARNING: DESTRUCTIVE - overwrite any files
   -f {csv,mysql,postgresql,sqlserver}, --filetype {csv,mysql,postgresql,sqlserver}
                         Filetype to generate
+  --fixed-length        Disable any variations in length for JSON arrays, text, etc.
   --generate-dates      Generate a file of datetimes for later use
   -g, --generate-skeleton
                         Generate a skeleton input JSON schema
   -i INPUT, --input INPUT
                         Input schema (JSON)
   --no-chunk            Do not chunk SQL INSERT statements
-  -n NUM, --num NUM     The number of rows to generate
+  -n NUM, --num NUM     The number of rows to generate - defaults to 1000
   -o OUTPUT, --output OUTPUT
-                        Output filename
+                        Output filename - defaults to gensql
   -r, --random          Enable randomness on the length of some items
   -t TABLE, --table TABLE
-                        Table name to generate SQL for
+                        Table name to generate SQL for - defaults to the filename
   --validate VALIDATE   Validate an input JSON schema
 ```
 
@@ -63,7 +65,7 @@ GenSQL expects a JSON input schema, of the format:
 * Generated datetimes are in UTC, i.e. no DST events exist. If you remove the query to set the session's timezone, you may have a bad time.
 * This uses a C library to perform random shuffles. There are no external libraries, so as long as you have a reasonably new compiler, `make` should work for you.
 * `--force` and `--drop-table` have warnings for a reason. If you run a query with `DROP TABLE IF EXISTS`, please be sure of what you're doing.
-* `--random` allows for TEXT and JSON columns to have varying amounts of length, which may or may not matter to you. It will cause a ~10% slowdown. If not selected, a deterministic 20% of the rows in these columns will have a longer length than the rest. If this also bothers you, change DEFAULT_VARYING_LENGTH to `False`.
+* `--random` allows for TEXT and JSON columns to have varying amounts of length, which may or may not matter to you. It will cause a ~10% slowdown. If not selected, a deterministic 20% of the rows in these columns will have a longer length than the rest. If this also bothers you, use `--fixed-length`.
 * `--generate-dates` takes practically the same amount of time, or slightly longer, than just having them generated on-demand. It's useful if you want to have the same set of datetimes for a series of tables, although their actual ordering for row generation will remain random.
 * Any column with `id` in its name will by default be assumed to be an integer type, and will have integers generated for it. You can provide hints to disable this, or to enable it for columns without `id` in their names, by using `is_id: {true, false}` in your schema.
 * To have an empty JSON array be set as the default value for a JSON column, use the default value `array()`.
