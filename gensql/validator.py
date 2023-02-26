@@ -1,9 +1,11 @@
+import csv
 import json
 from pathlib import PurePath
 
 from exceptions.exceptions import SchemaValidationError
-from utilities.constants import MYSQL_INT_MIN_MAX
+from utilities.constants import ALLOWED_COLS, ALLOWED_UNIQUES, MYSQL_INT_MIN_MAX
 from utilities import utilities
+
 
 class Validator:
     def __init__(self, args):
@@ -21,12 +23,12 @@ class Validator:
 
         try:
             if self.args.input:
-                filename = PurePath(self.args.input).stem
+                filename = PurePath(self.args.input).with_suffix(".json")
             elif self.args.validate:
-                filename = PurePath(self.args.validate).stem
+                filename = PurePath(self.args.validate).with_suffix(".json")
             else:
-                filename = "skeleton"
-            with open(f"{filename}.json", "r") as f:
+                filename = "schema_inputs/skeleton.json"
+            with open(filename, "r") as f:
                 try:
                     schema = json.loads(f.read())
                 except json.JSONDecodeError as e:
@@ -56,24 +58,6 @@ class Validator:
                 error_schema[key]["error"] = error_message
             except KeyError:
                 raise
-
-        allowed_cols = [
-            "bigint unsigned",
-            "bigint",
-            "char",
-            "decimal",
-            "double",
-            "email",
-            "int unsigned",
-            "int",
-            "json",
-            "phone",
-            "smallint unsigned",
-            "smallint",
-            "text",
-            "timestamp",
-            "varchar",
-        ]
 
         pks = []
         errors = {}
@@ -108,12 +92,12 @@ class Validator:
                     v,
                     f"column `{k}` must be of type `char` or `varchar`",
                 )
-            if k == "phone" and col_unique:
+            if col_unique and k not in ALLOWED_UNIQUES:
                 _add_error(
                     errors,
                     (k, "unique"),
                     v,
-                    f"unique is not a valid option for column `{k}` - this is a performance decision; numbers are still unlikely to collide",
+                    f"unique is not a valid option for column `{k}`",
                 )
             if not col_type:
                 _add_error(
@@ -122,7 +106,7 @@ class Validator:
                     v,
                     f"column `{k}` is missing a type property",
                 )
-            if col_type not in allowed_cols:
+            if col_type not in ALLOWED_COLS:
                 _add_error(
                     errors,
                     (k, "type"),

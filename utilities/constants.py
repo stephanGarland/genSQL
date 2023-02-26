@@ -1,3 +1,23 @@
+ALLOWED_COLS = [
+    "bigint unsigned",
+    "bigint",
+    "char",
+    "decimal",
+    "double",
+    "email",
+    "int unsigned",
+    "int",
+    "json",
+    "phone",
+    "smallint unsigned",
+    "smallint",
+    "text",
+    "timestamp",
+    "varchar",
+]
+
+ALLOWED_UNIQUES = ["email"]
+
 CITIES_COUNTRIES = {
     x.split(",")[0]: x.split(",")[1]
     for x in open("content/cities_countries.txt").read().splitlines()
