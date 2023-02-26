@@ -69,6 +69,7 @@ GenSQL expects a JSON input schema, of the format:
 * `--generate-dates` takes practically the same amount of time, or slightly longer, than just having them generated on-demand. It's useful if you want to have the same set of datetimes for a series of tables, although their actual ordering for row generation will remain random.
 * Any column with `id` in its name will by default be assumed to be an integer type, and will have integers generated for it. You can provide hints to disable this, or to enable it for columns without `id` in their names, by using `is_id: {true, false}` in your schema.
 * To have an empty JSON array be set as the default value for a JSON column, use the default value `array()`.
+* The generated values for a JSON column can be an object of random words (the default), or an array of random integers. For the latter, set the hint `is_numeric_array` in the schema's object.
 * To have the current datetime statically defined as the default value for a TIMESTAMP column, use the default value `static_now()`. To have the column's default automatically update the timestamp, use the default value `now()`.
 * Using a column of name `phone` will generate realistic - to the best of my knowledge - phone numbers for a given country (very limited set). It's currently non-optimized for performance, and thus incurs a ~40% slowdown over the baseline. A solution in C may or may not speed things up, as it's not that performing `random.shuffle()` on a 10-digit number is slow, it's that doing so `n` times is a lot of function calls. Inlining C functions in Python [does exist](https://github.com/ssize-t/inlinec), but the non-caching of its compilation would probably negate any savings.
 * Similarly, a column of name `email` will generate realistic email addresses (all with `.com` TLD), and will incur a ~40% slowdown over the baseline.
@@ -86,7 +87,8 @@ And then, from within the `mysql` client:
 
 ```mysql
 mysql> SET @@time_zone = '+00:00';
-mysql> LOAD DATA INFILE '/path/to/your/file.csv' INTO TABLE $TABLE_NAME FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY "'" IGNORE 1 LINES;
+mysql> SET @@unique_checks = 0;
+mysql> LOAD DATA INFILE '/path/to/your/file.csv' INTO TABLE $TABLE_NAME FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY "'" IGNORE 1 LINES ($COL_0, $COL_1, ... $COL_N);
 Query OK, 1000 rows affected (1.00 sec)
 Records: 1000  Deleted: 0  Skipped: 0  Warnings: 0
 ```
