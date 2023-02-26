@@ -34,10 +34,12 @@ if __name__ == "__main__":
         skeleton = dedent(h.make_skeleton())[1:]
         try:
             try:
-                filename = PurePath(args.output).stem
+                filename = PurePath(args.output).with_suffix(".json")
             except TypeError:
-                filename = "skeleton"
-            with open(f"{filename}.json", f"{'w' if args.force else 'x'}") as f:
+                filename = "skeleton.json"
+            with open(
+                f"schema_inputs/{filename}", f"{'w' if args.force else 'x'}"
+            ) as f:
                 f.write(skeleton)
             raise SystemExit(0)
         except FileExistsError:
@@ -64,14 +66,22 @@ if __name__ == "__main__":
             raise OverwriteFileError(filename) from None
         except PermissionError:
             raise OutputFilePermissionError(filename) from None
-    tbl_name = args.table or args.output or "gensql"
+    try:
+        tbl_name = args.table or args.output or PurePath(args.input).stem
+    except TypeError:
+        tbl_name = "gensql"
     schema_dict = v.parse_schema()
     schema_dict = utils.lowercase_schema(schema_dict)
     v.validate_schema(schema_dict)
     tbl_create, tbl_cols = g.mysql(schema_dict, tbl_name, args.drop_table)
     # generally, there isn't a good reason to insert values manually into an auto-incrementing col
     auto_inc_cols = [x for x in tbl_cols.keys() if tbl_cols[x].get("auto_inc")]
+    # if the user has hinted that a column is empty, it should only be created, not given inserts
+    empty_cols = [x for x in tbl_cols.keys() if tbl_cols[x].get("is_empty")]
+    unique_cols = [x for x in tbl_cols.keys() if tbl_cols[x].get("unique")]
     for x in auto_inc_cols:
+        del tbl_cols[x]
+    for x in empty_cols:
         del tbl_cols[x]
     r = Runner(args, schema_dict, tbl_name, tbl_cols, tbl_create)
     r.run()

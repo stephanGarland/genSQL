@@ -60,7 +60,7 @@ class Runner:
         # the user can specify --validate without passing --num, uniques have to be checked here
         numeric_cols = {
             k: v
-            for k, v in self.tbl_cols.items()
+            for k, v in self.schema.items()
             if "int" in v["type"] or v["type"] in ["decimal", "double", "int"]
         }
         for k, v in numeric_cols.items():
@@ -132,11 +132,13 @@ class Runner:
             sample_list.append(iterable[idx])
         return sample_list
 
-    def make_row(self, schema: dict, idx: int, has_timestamp: bool) -> dict:
+    def make_row(self, idx: int, has_timestamp: bool) -> dict:
         row = {}
         if has_timestamp:
             date = self.sample(self.dates, self.args.num)
-        for col, opts in schema.items():
+        for col, opts in self.schema.items():
+            if opts.get("is_empty"):
+                continue
             if "int" in opts.get("type"):
                 if opts.get("auto_increment"):
                     # may or may not just remove this, for now pass is fine
@@ -186,7 +188,7 @@ class Runner:
                     )
                 else:
                     json_arr_len = ceil((JSON_OBJ_MAX_VALS - 1) * max_rows_pct)
-                if schema[col].get("is_numeric_array"):
+                if self.schema[col].get("is_numeric_array"):
                     rand_id_list = []
                     # make 5% of the JSON arrays filled with random integers
                     if not idx % 20:
@@ -259,7 +261,7 @@ class Runner:
                 random.shuffle(phone_digits)
                 phone_str = "".join(phone_digits)
                 row[col] = f"'{PHONE_NUMBERS[self.args.country](phone_str)}'"
-            elif schema[col]["type"] == "text":
+            elif self.schema[col]["type"] == "text":
                 max_rows_pct = float(opts.get("max_length", DEFAULT_MAX_FIELD_PCT))
                 # e.g. if max_rows_pct is 0.15, with 25 rows in lorem ipsum, we get a range of 1-4 rows
                 if not self.args.fixed_length:
@@ -324,40 +326,77 @@ class Runner:
 
         return insert_rows
 
-    def run(self):
+    def run(self) -> str:
         sql_inserts = []
         random.seed(urandom(4))
         _has_timestamp = any("timestamp" in s.values() for s in self.schema.values())
+        unique_cols = [k for k, v in self.schema.items() if v.get("unique")]
+        seen_rows = set()
         for i in range(1, self.args.num + 1):
-            row = self.make_row(self.schema, i, _has_timestamp)
+            row = self.make_row(i, _has_timestamp)
+            if not self.args.no_check:
+                for unique in unique_cols:
+                    if row[unique] in seen_rows:
+                        # TODO: expand this beyond only emails
+                        counter = 1
+                        email_split = row[unique].split("@")
+                        new_email = f"{email_split[0]}_{counter}@{email_split[1]}"
+                        # don't spend forever trying to de-duplicate
+                        while new_email in seen_rows:
+                            if counter > 9:
+                                print(f"WARNING: unable to de-duplicate {row[unique]}")
+                                break
+                            counter += 1
+                            new_email = f"{email_split[0]}_{counter}@{email_split[1]}"
+                        row[unique] = new_email
+                        seen_rows.add(row[unique])
+                    else:
+                        seen_rows.add(row[unique])
             sql_inserts.append(row)
         vals = [",".join(str(v) for v in d.values()) for d in sql_inserts]
         match self.args.filetype:
             case "mysql":
                 lines = self.make_sql_rows(vals)
                 try:
-                    filename = f"{PurePath(self.args.output).stem}.sql"
+                    filename = f"{PurePath(self.args.output).with_suffix('.sql')}"
                 except TypeError:
-                    filename = "gensql.sql"
+                    try:
+                        filename = f"{PurePath(self.args.input).stem}.sql"
+                    except TypeError:
+                        filename = "gensql.sql"
             case "csv":
                 lines = self.make_csv_rows(vals)
                 try:
-                    filename = f"{PurePath(self.args.output).stem}.csv"
+                    filename = f"{PurePath(self.args.output).with_suffix('.csv')}"
                 except TypeError:
-                    filename = "gensql.csv"
+                    try:
+                        filename = f"{PurePath(self.args.input).stem}.csv"
+                    except TypeError:
+                        filename = "gensql.csv"
             case _:
                 raise ValueError(f"{self.args.filetype} is not a valid output format")
         try:
-            with open(filename, f"{'w' if self.args.force else 'x'}") as f:
+            with open(
+                f"schema_outputs/{filename}", f"{'w' if self.args.force else 'x'}"
+            ) as f:
                 if "sql" in self.args.filetype:
                     f.writelines(self.tbl_create)
                 if self.args.filetype == "csv":
                     with open(
-                        "tbl_create.sql", f"{'w' if self.args.force else 'x'}"
+                        f"schema_outputs/tbl_{self.tbl_name}_create.sql",
+                        f"{'w' if self.args.force else 'x'}",
                     ) as ft:
                         ft.writelines(self.tbl_create)
                 f.writelines(lines)
+                if not self.args.quiet:
+                    print("SET @@time_zone = '+00:00';")
+                    if not self.args.no_check:
+                        print("SET @@unique_checks=0;")
+                    print(
+                        f"LOAD DATA INFILE '{filename}' INTO TABLE `{self.tbl_name}` FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY \"'\" IGNORE 1 LINES (`{'`, `'.join(self.tbl_cols)}`);"
+                    )
         except FileExistsError:
             raise OverwriteFileError(filename) from None
         except PermissionError:
             raise OutputFilePermissionError(filename) from None
+        return f"schema_outputs/{filename}"

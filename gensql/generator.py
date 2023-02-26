@@ -62,12 +62,14 @@ class Generator:
                         cols[col]["invisible"] = self.utils.strtobool(v)
                     case "width":
                         cols[col]["width"] = v
-                    case "is_numeric_array":
-                        pass
+                    case "is_empty":
+                        cols[col]["is_empty"] = self.utils.strtobool(v)
                     case "is_id":
-                        pass
+                        cols[col]["is_id"] = self.utils.strtobool(v)
+                    case "is_numeric_array":
+                        cols[col]["is_id"] = self.utils.strtobool(v)
                     case "max_length":
-                        pass
+                        cols[col]["max_length"] = v
                     case "nullable":
                         cols[col]["nullable"] = self.utils.strtobool(v)
                     case "primary_key":
@@ -97,6 +99,8 @@ class Generator:
                     col_opts.append(f"DEFAULT ({col_default})")
                 elif col_default == "now()":
                     col_opts.append("DEFAULT NOW() ON UPDATE NOW()")
+                elif col_default == "null_now()":
+                    col_opts.append("DEFAULT NULL ON UPDATE NOW()")
                 elif col_default == "static_now()":
                     col_opts.append("DEFAULT NOW()")
                 else:

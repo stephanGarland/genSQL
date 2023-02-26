@@ -71,6 +71,7 @@ class Args:
         parser.add_argument(
             "--country",
             choices=["random", "au", "de", "fr", "gb", "ke", "jp", "mx", "ua", "us"],
+            default="random",
             help="A specific country (or random) to use for cities, phone numbers, etc.",
         )
         parser.add_argument(
@@ -115,6 +116,12 @@ class Args:
         )
         parser.add_argument("-i", "--input", help="Input schema (JSON)")
         parser.add_argument(
+            "--no-check",
+            action="store_true",
+            dest="no_check",
+            help="Do not perform validation checks for unique columns",
+        )
+        parser.add_argument(
             "--no-chunk",
             action="store_true",
             dest="no_chunk",
@@ -129,6 +136,12 @@ class Args:
         )
         parser.add_argument(
             "-o", "--output", help="Output filename - defaults to gensql"
+        )
+        parser.add_argument(
+            "-q",
+            "--quiet",
+            action="store_true",
+            help="Suppress printing various informational messages",
         )
         parser.add_argument(
             "-r",
@@ -269,7 +282,10 @@ class Utilities:
         """
         if val is None:
             return False
-        val = val.lower()
+        try:
+            val = val.lower()
+        except AttributeError:
+            val = str(val).lower()
         if val in ("y", "yes", "t", "true", "on", "1"):
             return True
         elif val in ("n", "no", "f", "false", "off", "0"):
