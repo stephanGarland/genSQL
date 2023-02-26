@@ -8,7 +8,7 @@ Ever want to quickly create millions of rows of random data for a database, with
 
 ```shell
 usage: gensql.py [-h] [--extended-help] [--country {random,au,de,fr,gb,ke,jp,mx,ua,us}] [-d] [--drop-table] [--force] [-f {csv,mysql,postgresql,sqlserver}] [--fixed-length]
-                 [--generate-dates] [-g] [-i INPUT] [--no-chunk] [-n NUM] [-o OUTPUT] [-r] [-t TABLE] [--validate VALIDATE]
+                 [--generate-dates] [-g] [-i INPUT] [--no-check] [--no-chunk] [-n NUM] [-o OUTPUT] [-q] [-r] [-t TABLE] [--validate VALIDATE]
 
 options:
   -h, --help            show this help message and exit
@@ -26,10 +26,12 @@ options:
                         Generate a skeleton input JSON schema
   -i INPUT, --input INPUT
                         Input schema (JSON)
+  --no-check            Do not perform validation checks for unique columns
   --no-chunk            Do not chunk SQL INSERT statements
   -n NUM, --num NUM     The number of rows to generate - defaults to 1000
   -o OUTPUT, --output OUTPUT
                         Output filename - defaults to gensql
+  -q, --quiet           Suppress printing various informational messages
   -r, --random          Enable randomness on the length of some items
   -t TABLE, --table TABLE
                         Table name to generate SQL for - defaults to the filename
@@ -70,7 +72,8 @@ GenSQL expects a JSON input schema, of the format:
 * Any column with `id` in its name will by default be assumed to be an integer type, and will have integers generated for it. You can provide hints to disable this, or to enable it for columns without `id` in their names, by using `is_id: {true, false}` in your schema.
 * To have an empty JSON array be set as the default value for a JSON column, use the default value `array()`.
 * The generated values for a JSON column can be an object of random words (the default), or an array of random integers. For the latter, set the hint `is_numeric_array` in the schema's object.
-* To have the current datetime statically defined as the default value for a TIMESTAMP column, use the default value `static_now()`. To have the column's default automatically update the timestamp, use the default value `now()`.
+* To have a column be given no `INSERT` statements, e.g. remain empty / with its default value, set the hint `is_empty: true` in the schema definition for the column.
+* To have the current datetime statically defined as the default value for a TIMESTAMP column, use the default value `static_now()`. To also have the column's default automatically update the timestamp, use the default value `now()`. To have the column's default value be NULL, but update automatically to the current timestamp when the row is updated, use `null_now()`.
 * Using a column of name `phone` will generate realistic - to the best of my knowledge - phone numbers for a given country (very limited set). It's currently non-optimized for performance, and thus incurs a ~40% slowdown over the baseline. A solution in C may or may not speed things up, as it's not that performing `random.shuffle()` on a 10-digit number is slow, it's that doing so `n` times is a lot of function calls. Inlining C functions in Python [does exist](https://github.com/ssize-t/inlinec), but the non-caching of its compilation would probably negate any savings.
 * Similarly, a column of name `email` will generate realistic email addresses (all with `.com` TLD), and will incur a ~40% slowdown over the baseline.
 
@@ -108,7 +111,7 @@ However, if you don't have access to the host, there are some tricks GenSQL has 
 * Disabling autocommit
   * Normally, each statement is committed one at a time. With this disabled, an explicit `COMMIT` statement must be used to commit.
 * Disabling unique checks
-  * Normally, the SQL engine will check that any columns declaring `UNIQUE` constraints do in fact meet that constraint. With this disabled, repetitive `INSERT` statements are much faster, with the obvious risk of violating the constraint. For nonsense data that has been created with unique elements, this is safe to temporarily disable.
+  * Normally, the SQL engine will check that any columns declaring `UNIQUE` constraints do in fact meet that constraint. With this disabled, repetitive `INSERT` statements are much faster, with the obvious risk of violating the constraint. Since GenSQL by default does its own checks at creation for unique columns (currently limited to integer columns and `email` columns), this is generally safe to disable. If you use `--no-check`, this should not be disabled.
 * Multi-INSERT statements
   * Normally, an `INSERT` statement might look something like `INSERT INTO $TABLE (col_1, col_2) VALUES (row_1, row_2);` Instead, they can be written like `INSERT INTO $TABLE (col_1, col_2) VALUES (row_1, row_2), (row_3, row_4),` with `n` tuples of row data. By default, `mysqld` (the server) is limited to a 64 MiB packet size, and `mysql` (the client) to a 16 MiB packet size. Both of these can be altered up to 1 GiB, but the server side may not be accessible to everyone, so GenSQL limits itself to a 10,000 row chunk size, which should comfortably fit under the server limit. For the client, you'll need to pass `--max-allowed-packet=67108864` as an arg. If you don't want this behavior, you can use `--no-chunk` when creating the data.
 
