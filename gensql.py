@@ -4,6 +4,7 @@ import sys
 
 from gensql.generator import Generator
 from gensql.runner import Runner
+from gensql.validator import Validator
 
 from exceptions.exceptions import (
     OutputFilePermissionError,
@@ -17,13 +18,19 @@ if __name__ == "__main__":
     utils = utilities.Utilities()
     h = utilities.Help()
     args = utilities.Args().make_args()
+    v = Validator(args)
     g = Generator(args)
     if not args.debug:
         sys.tracebacklimit = 0
     if args.extended_help:
         h.extended_help()
+    elif args.validate:
+        if v.validate_schema(v.parse_schema()):
+            # \u2704 == green checkmark
+            print("\u2705 INFO: validated schema, no errors detected")
+            raise SystemExit(0)
     elif args.generate:
-        # due to the multi-line string output, there's a leading newline
+        # due to the multi-line string output, there's a leading newline to remove
         skeleton = dedent(h.make_skeleton())[1:]
         try:
             try:
@@ -37,10 +44,6 @@ if __name__ == "__main__":
             raise OverwriteFileError(filename) from None
         except PermissionError:
             raise OutputFilePermissionError(filename) from None
-    elif args.validate:
-        if g.validate_schema(g.parse_schema()):
-            print("INFO: validated schema, no errors detected")
-            raise SystemExit(0)
     elif args.dates:
         if args.output:
             warnings.append(f"--output {args.output}")
@@ -62,9 +65,9 @@ if __name__ == "__main__":
         except PermissionError:
             raise OutputFilePermissionError(filename) from None
     tbl_name = args.table or args.output or "gensql"
-    schema_dict = g.parse_schema()
+    schema_dict = v.parse_schema()
     schema_dict = utils.lowercase_schema(schema_dict)
-    g.validate_schema(schema_dict)
+    v.validate_schema(schema_dict)
     tbl_create, tbl_cols = g.mysql(schema_dict, tbl_name, args.drop_table)
     # generally, there isn't a good reason to insert values manually into an auto-incrementing col
     auto_inc_cols = [x for x in tbl_cols.keys() if tbl_cols[x].get("auto_inc")]

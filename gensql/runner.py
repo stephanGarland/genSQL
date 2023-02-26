@@ -179,15 +179,6 @@ class Runner:
                 row[col] = f"'{full_name}'"
 
             elif opts.get("type") == "json":
-                json_dict = {}
-                json_keys = self.sample(
-                    self.wordlist, self.num_rows_wordlist, JSON_OBJ_MAX_KEYS
-                )
-                # grab an extra for use with email if needed
-                json_vals = self.sample(
-                    self.wordlist, self.num_rows_wordlist, JSON_OBJ_MAX_VALS + 1
-                )
-                json_dict[json_keys.pop()] = json_vals.pop()
                 max_rows_pct = float(opts.get("max_length", DEFAULT_MAX_FIELD_PCT))
                 if self.args.random:
                     json_arr_len = ceil(
@@ -195,14 +186,36 @@ class Runner:
                     )
                 else:
                     json_arr_len = ceil((JSON_OBJ_MAX_VALS - 1) * max_rows_pct)
-                # make 20% of the JSON objects nested with a list object of length defined above
-                if not idx % 5:
-                    key = json_keys.pop()
-                    json_dict[key] = {}
-                    json_dict[key][json_keys.pop()] = [
-                        json_vals.pop() for _ in range(json_arr_len)
-                    ]
-                row[col] = f"'{json.dumps(json_dict)}'"
+                if schema[col].get("is_numeric_array"):
+                    rand_id_list = []
+                    # make 5% of the JSON arrays filled with random integers
+                    if not idx % 20:
+                        for i in range(json_arr_len):
+                            rand_id = self.random_id.allocate()
+                            rand_id_list.append(str(rand_id))
+                            self.random_id.release(rand_id)
+                        rand_ids = ",".join(rand_id_list)
+                        row[col] = f"'[{rand_ids}]'"
+                    else:
+                        row[col] = "'[]'"
+                else:
+                    json_dict = {}
+                    json_keys = self.sample(
+                        self.wordlist, self.num_rows_wordlist, JSON_OBJ_MAX_KEYS
+                    )
+                    # grab an extra for use with email if needed
+                    json_vals = self.sample(
+                        self.wordlist, self.num_rows_wordlist, JSON_OBJ_MAX_VALS + 1
+                    )
+                    json_dict[json_keys.pop()] = json_vals.pop()
+                    # make 20% of the JSON objects nested
+                    if not idx % 5:
+                        key = json_keys.pop()
+                        json_dict[key] = {}
+                        json_dict[key][json_keys.pop()] = [
+                            json_vals.pop() for _ in range(json_arr_len)
+                        ]
+                    row[col] = f"'{json.dumps(json_dict)}'"
 
             elif col == "city":
                 if self.args.country and not self.args.country == "random":
@@ -284,8 +297,8 @@ class Runner:
     def make_sql_rows(self, vals: list) -> list:
         insert_rows = []
         insert_rows.append("SET @@time_zone = '+00:00';\n")
-        insert_rows.append("SET autocommit=0;\n")
-        insert_rows.append("SET unique_checks=0;\n")
+        insert_rows.append("SET @@autocommit=0;\n")
+        insert_rows.append("SET @@unique_checks=0;\n")
         insert_rows.append(f"LOCK TABLES `{self.tbl_name}` WRITE;\n")
         if not self.args.no_chunk:
             for i in range(0, len(vals), DEFAULT_INSERT_CHUNK_SIZE):
@@ -304,8 +317,9 @@ class Runner:
                     f"INSERT INTO `{self.tbl_name}` (`{'`, `'.join(self.tbl_cols)}`) VALUES ({row});\n"
                 )
         insert_rows.append("COMMIT;\n")
-        insert_rows.append("SET autocommit=1;\n")
-        insert_rows.append("SET unique_checks=1;\n")
+        insert_rows.append("SET @@autocommit=1;\n")
+        insert_rows.append("SET @@unique_checks=1;\n")
+        insert_rows.append("SET @@time_zone=(SELECT @@global.time_zone);\n")
         insert_rows.append(f"UNLOCK TABLES;\n")
 
         return insert_rows
