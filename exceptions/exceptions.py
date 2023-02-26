@@ -21,12 +21,17 @@ class SchemaValidationError(BaseError):
             for err, err_col_props in errors.items():
                 # \u274c == red cross mark
                 err_col_prop_key = f"\u274c {err[1]}"
+                err_message_key = f"\U0001F53B error"
                 if err_col_props == schema_col_props:
+                    output_dict[err[0]][err_message_key] = output_dict[err[0]]["error"]
                     output_dict[err[0]][err_col_prop_key] = output_dict[err[0]][err[1]]
                     del output_dict[err[0]][err[1]]
+                    del output_dict[err[0]]["error"]
         super(SchemaValidationError, self).__init__(self.msg)
-        pprint(output_dict, sort_dicts=False)
+        pprint(output_dict, sort_dicts=False, width=120)
 
+    def __reduce__(self):
+        return (SchemaValidationError, self.msg)
 
 class OutputFilePermissionError(BaseError):
     """Lack permissions to write file to desired path"""
