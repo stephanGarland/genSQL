@@ -1,0 +1,32 @@
+{
+    "user_id": {
+        "type": "bigint unsigned",
+        "nullable": "true",
+        "auto_increment": "true",
+        "primary_key": "true"
+    },
+    "name": {
+        "type": "varchar",
+        "width": "255",
+        "auto_increment": "true",
+        "nullable": "false"
+    },
+    "external_id": {
+        "type": "bigint unsigned",
+        "width": "255",
+        "nullable": "false",
+        "unique": "true",
+        "default": "0"
+    },
+    "last_modified": {
+        "type": "timestamp",
+        "nullable": "true",
+        "default": "NULL"
+    },
+    "extra_pk": {
+        "type": "bigint unsigned",
+        "nullable": "false",
+        "auto_increment": "false",
+        "primary_key": "true"
+    }
+}
