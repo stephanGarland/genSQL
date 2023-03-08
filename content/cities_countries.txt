@@ -109,7 +109,6 @@ Albacete,Spain
 Albany,Australia
 Albany,New Zealand
 Albany,United States
-Albany,United States
 Albenga,Italy
 Alberton,South Africa
 Albertville,France
@@ -375,7 +374,6 @@ Attenkirchen,Germany
 Attock,Pakistan
 Aubigny-sur-Nere,France
 Auburn,United States
-Auburn,United States
 Auckland,New Zealand
 Augsburg,Germany
 Augusta,Italy
@@ -384,8 +382,6 @@ Augustenborg,Denmark
 Auning,Denmark
 Aurangabad,India
 Aurora,Canada
-Aurora,United States
-Aurora,United States
 Austin,United States
 Autlan De Navarro,Mexico
 Auxerre,France
@@ -780,8 +776,6 @@ Blenheim,Canada
 Blenheim,New Zealand
 Blitar,Indonesia
 Bloodvein,Canada
-Bloomington,United States
-Bloomington,United States
 Bloomington,United States
 Blotzheim,France
 Blue Mountain,Australia
@@ -1393,8 +1387,6 @@ Colonia,Micronesi
 Colonia,Uruguay
 Colorado Springs,United States
 Columbia,United States
-Columbia,United States
-Columbus,United States
 Columbus,United States
 Comayagua,Honduras
 Comayaguela,Honduras
@@ -1410,7 +1402,6 @@ Conakry,Guinea
 Concepcion,Chile
 Concepcion,Panama
 Conchali,Chile
-Concord,United States
 Concord,United States
 Concordia,Argentina
 Conegliano,Italy
@@ -1436,7 +1427,6 @@ Coquitlam,Canada
 Coral Springs,United States
 Cordoba,Argentina
 Cordoba,Mexico
-Cordoba,Spain
 Córdoba,Spain
 Corinth,Greece
 Corinto,Nicaragua
@@ -1995,7 +1985,6 @@ Fatehgarh,India
 Fatehpur Sikri,India
 Faulbach,Germany
 Fayetteville,United States
-Fayetteville,United States
 Federal Way,United States
 Feldkirchen,Austria
 Feltham,United Kingdom
@@ -2196,7 +2185,6 @@ Gaya,India
 Gaza City,Palestinian Territory Occupied
 Gaziantep,Turkey
 Gbarnga,Liberia
-Gdansk,Poland
 Gdañsk,Poland
 Gdynia,Poland
 Gedern,Germany
@@ -2266,7 +2254,6 @@ Gladstone,Australia
 Glarus,Switzerland
 Glasgow,United Kingdom
 Glastonbury,United Kingdom
-Glendale,United States
 Glendale,United States
 Glenorchy,Australia
 Gliwice,Poland
@@ -2344,7 +2331,6 @@ Green Bay,United States
 Greenfield Park,Canada
 Greenock,United Kingdom
 Greensboro,United States
-Greenville,United States
 Greenville,United States
 Greenwood,United States
 Gregory Park,Jamaica
@@ -2872,8 +2858,6 @@ Izumo,Japan
 Jabalpur,India
 Jablonec nad Nisou,Czech Republic
 Jackson,United States
-Jackson,United States
-Jacksonville,United States
 Jacksonville,United States
 Jacmel,Haiti
 Jaco,Costa Rica
@@ -3079,7 +3063,6 @@ Kannur,India
 Kannus,Finland
 Kanoya,Japan
 Kanpur,India
-Kansas City,United States
 Kansas City,United States
 Kanzaki,Japan
 Kaohsiung County,Taiwan
@@ -3461,7 +3444,6 @@ Ladybrand,South Africa
 Lae,Papua New Guinea
 Laem Chabang,Thailand
 Lafayette,United States
-Lafayette,United States
 Lagoa,Portugal
 Lagos De Moreno,Mexico
 Lagos,Nigeria
@@ -3485,7 +3467,6 @@ Lake Louise,Canada
 Lakeland,United States
 Lakenheath,United Kingdom
 Lakeville,United States
-Lakewood,United States
 Lakewood,United States
 Lakhisarai,India
 Lalamusa,Pakistan
@@ -3559,7 +3540,6 @@ Laureles,Colombia
 Lausanne,Switzerland
 Laval,Canada
 Laval,France
-Lawrence,United States
 Lawrence,United States
 Lawton,United States
 Layton,United States
@@ -4135,7 +4115,6 @@ Mercara,India
 Merced,United States
 Merefa,Ukraine
 Merelbeke,Belgium
-Merida,Mexico
 Mérida,Mexico
 Mérida,Spain
 Merida,Venezuela
@@ -4658,7 +4637,6 @@ Northcote,Australia
 Northwich,United Kingdom
 Northwold,United Kingdom
 Norwalk,United States
-Norwalk,United States
 Norwich,United Kingdom
 Noshiro,Japan
 Nossebro,Sweden
@@ -4964,7 +4942,6 @@ Parsberg,Germany
 Partido,Dominican Republic
 Partille,Sweden
 Pasadena,United States
-Pasadena,United States
 Pasay,Philippines
 Pasco,United States
 Pasig,Philippines
@@ -5026,7 +5003,6 @@ Penrith,United Kingdom
 Penticton,Canada
 Penza,Russia
 Penzance,United Kingdom
-Peoria,United States
 Peoria,United States
 Pepillo Salcedo,Dominican Republic
 Peralta,Dominican Republic
@@ -5212,7 +5188,6 @@ Portachuelo,Bolivia
 Portage,Canada
 Portalegre,Portugal
 Portland,Australia
-Portland,United States
 Portland,United States
 Portmore,Jamaica
 Porto Alegre,Brazil
@@ -5541,7 +5516,6 @@ Richmond Hill,Canada
 Richmond,Australia
 Richmond,Canada
 Richmond,United States
-Richmond,United States
 Riesa,Germany
 Rietavas,Lithuania
 Riga,Latvia
@@ -5586,7 +5560,6 @@ Robertson,South Africa
 Rocha,Uruguay
 Rochester Hills,United States
 Rochester,United Kingdom
-Rochester,United States
 Rochester,United States
 Rock Hill,United States
 Rock Sound,Bahamas
@@ -5870,7 +5843,6 @@ San Lorenzo,Paraguay
 San Luis Potosi,Mexico
 San Luis Rio Colorado,Mexico
 San Marcos,Nicaragua
-San Marcos,United States
 San Marcos,United States
 San Marino,San Marino
 San Martin,Argentina
@@ -6244,7 +6216,6 @@ Skive,Denmark
 Skjeberg,Norway
 Skokie,United States
 Skopje,Macedoni
-Skovde,Sweden
 Skövde,Sweden
 Skummeslövsstrand,Sweden
 Skuodas,Lithuania
@@ -6358,8 +6329,6 @@ Spring Vale,Jamaica
 Spring Village,Jamaica
 Springdale,United States
 Springfield,Jamaica
-Springfield,United States
-Springfield,United States
 Springfield,United States
 Springlands,Guyana
 Springwood,Australia
@@ -6526,7 +6495,6 @@ Syktyvkar,Russia
 Syracuse,United States
 Szczecin,Poland
 Szeged,Hungary
-Szekesfehervar,Hungary
 Székesfehérvár,Hungary
 Szekszard,Hungary
 Szolnok,Hungary
@@ -6967,7 +6935,6 @@ Umhlanga,South Africa
 Umred,India
 União da Vitória,Brazil
 Union City,United States
-Union City,United States
 Unionville,Canada
 Unis,Trinidad and Tobago
 Unity Hall,Jamaica
@@ -7324,7 +7291,6 @@ Westkapelle,Netherlands
 Westland,United States
 Westmalle,Belgium
 Westminster,United States
-Westminster,United States
 Weston Under Lizard,United Kingdom
 Weston,United States
 Westport,Canada
@@ -7366,7 +7332,6 @@ Willemstad,Netherlands Antilles
 Williams Lake,Canada
 Williamstown,Australia
 Willich,Germany
-Wilmington,United States
 Wilmington,United States
 Wilmslow,United Kingdom
 Wilsons Promontory,Australia
