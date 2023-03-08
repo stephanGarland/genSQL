@@ -3,6 +3,7 @@ from math import ceil, floor
 from os import urandom
 import random
 from pathlib import PurePath
+from string import ascii_lowercase
 
 from exceptions.exceptions import (
     OutputFilePermissionError,
@@ -91,7 +92,10 @@ class Runner:
 
         if _has_monotonic:
             self.monotonic_id = self.allocator(0, self.args.num)
-        self.random_id = self.allocator(0, self.rand_max_id, shuffle=True)
+        try:
+            self.random_id = self.allocator(0, self.rand_max_id, shuffle=True)
+        except AttributeError:
+            self.random_id = self.allocator(0, self.args.num, shuffle=True)
         if _has_unique:
             self.unique_id = self.allocator(0, self.args.num, shuffle=True)
         try:
@@ -202,19 +206,28 @@ class Runner:
                         row[col] = "'[]'"
                 else:
                     json_dict = {}
-                    json_keys = self.sample(
-                        self.wordlist, self.num_rows_wordlist, JSON_OBJ_MAX_KEYS
-                    )
+                    # may or may not want to use this again
+                    # json_keys = self.sample(
+                    #    self.wordlist, self.num_rows_wordlist, JSON_OBJ_MAX_KEYS
+                    # )
+                    json_keys = [f"{x}_key" for x in ascii_lowercase]
                     # grab an extra for use with email if needed
                     json_vals = self.sample(
                         self.wordlist, self.num_rows_wordlist, JSON_OBJ_MAX_VALS + 1
                     )
-                    json_dict[json_keys.pop()] = json_vals.pop()
+                    json_dict[json_keys.pop(0)] = json_vals.pop()
                     # make 20% of the JSON objects nested
-                    if not idx % 5:
-                        key = json_keys.pop()
+                    if not self.args.fixed_length:
+                        if not idx % 5:
+                            key = json_keys.pop(0)
+                            json_dict[key] = {}
+                            json_dict[key][json_keys.pop(0)] = [
+                                json_vals.pop() for _ in range(json_arr_len)
+                            ]
+                    else:
+                        key = json_keys.pop(0)
                         json_dict[key] = {}
-                        json_dict[key][json_keys.pop()] = [
+                        json_dict[key][json_keys.pop(0)] = [
                             json_vals.pop() for _ in range(json_arr_len)
                         ]
                     row[col] = f"'{json.dumps(json_dict)}'"
@@ -388,7 +401,7 @@ class Runner:
                     ) as ft:
                         ft.writelines(self.tbl_create)
                 f.writelines(lines)
-                if not self.args.quiet:
+                if not self.args.quiet and self.args.filetype == "csv":
                     print("SET @@time_zone = '+00:00';")
                     if not self.args.no_check:
                         print("SET @@unique_checks=0;")
