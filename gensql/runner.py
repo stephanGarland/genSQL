@@ -357,7 +357,7 @@ class Runner:
                         # don't spend forever trying to de-duplicate
                         while new_email in seen_rows:
                             if counter > 9:
-                                print(f"WARNING: unable to de-duplicate {row[unique]}")
+                                self.logger.warning(f"unable to de-duplicate {row[unique]}")
                                 break
                             counter += 1
                             new_email = f"{email_split[0]}_{counter}@{email_split[1]}"
