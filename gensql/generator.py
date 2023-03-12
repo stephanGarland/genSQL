@@ -3,14 +3,15 @@ from datetime import datetime, timedelta
 from math import floor
 import random
 
-from utilities import utilities
+from utilities import logger, utilities
 
 class Generator:
     def __init__(self, args):
         self.args = args
-        self.utils = utilities.Utilities()
-        self.start_date = datetime(1995, 5, 23)
         self.end_date = datetime.now()
+        self.logger = logger.Logger().logger
+        self.start_date = datetime(1995, 5, 23)
+        self.utils = utilities.Utilities()
 
     def make_dates(self, num: int) -> list:
         """
@@ -114,12 +115,20 @@ class Generator:
                 col
             ] = f"  `{col}` {cols[col]['type']}{' ' + ' '.join(col_opts) if col_opts else ''},"
         msg += "\n".join(col_defs.values())
-        msg += f"\n  PRIMARY KEY (`{pk}`){',' if uniques else ''}\n"
+        if pk:
+            msg += f"\n  PRIMARY KEY (`{pk}`){',' if uniques else ''}\n"
+        else:
+            self.logger.warning(
+                f"no primary key declared!"
+            )
+            msg += "\n"
         for i, u in enumerate(uniques, 1):
             msg += f"  UNIQUE KEY {u} (`{u}`)"
             if not i == len(uniques) and len(uniques) > 1:
                 msg += ",\n"
             else:
                 msg += "\n"
+        if not pk and not uniques:
+            msg = msg[::-1].replace(",","",1)[::-1]
         msg += f") ENGINE=InnoDB {'AUTO_INCREMENT=0' if auto_inc_exists else ''} DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;\n"
         return (msg, cols)
