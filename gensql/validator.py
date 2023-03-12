@@ -1,11 +1,9 @@
-import csv
 import json
 from pathlib import PurePath
 
 from exceptions.exceptions import SchemaValidationError
 from utilities.constants import ALLOWED_COLS, ALLOWED_UNIQUES, MYSQL_INT_MIN_MAX
 from utilities import utilities
-
 
 class Validator:
     def __init__(self, args):
@@ -92,7 +90,7 @@ class Validator:
                     v,
                     f"column `{k}` must be of type `char` or `varchar`",
                 )
-            if col_unique and k not in ALLOWED_UNIQUES:
+            if col_unique and k not in ALLOWED_UNIQUES and "int" not in col_type:
                 _add_error(
                     errors,
                     (k, "unique"),

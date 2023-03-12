@@ -5,7 +5,6 @@ import random
 
 from utilities import utilities
 
-
 class Generator:
     def __init__(self, args):
         self.args = args
