@@ -18,15 +18,15 @@ ALLOWED_COLS = [
 
 ALLOWED_UNIQUES = ["email"]
 
-CITIES_COUNTRIES = {
-    x.split(",")[0]: x.split(",")[1]
-    for x in open("content/cities_countries.txt").read().splitlines()
-}
+# CITIES_COUNTRIES = {
+#    x.split(",")[0]: x.split(",")[1]
+#    for x in open("content/cities_countries.txt").read().splitlines()
+# }
 
-COUNTRY_CODES = {
-    x.split(",")[1].lower(): x.split(",")[0]
-    for x in open("content/country_codes.txt").read().splitlines()
-}
+# COUNTRY_CODES = {
+#    x.split(",")[1].lower(): x.split(",")[0]
+#    for x in open("content/country_codes.txt").read().splitlines()
+# }
 
 DEFAULT_INSERT_CHUNK_SIZE = 10000
 DEFAULT_MAX_FIELD_PCT = 0.15
