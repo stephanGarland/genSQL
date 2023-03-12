@@ -274,6 +274,18 @@ class Utilities:
         conn.close()
         return result
 
+    # TODO: currently unused due to severe slowdown in runner.py, keeping
+    # in case that is worked out to re-benchmark
+    @cache
+    def get_word(self, indices: dict) -> list:
+        conn = sqlite3.connect("db/gensql.db")
+        cursor = conn.cursor()
+        query = f"SELECT word FROM words WHERE id IN ({''', '''.join(indices)})"
+        cursor.execute(query)
+        result = [x[0] for x in cursor.fetchall()]
+        conn.close()
+        return result
+
     def lowercase_schema(self, schema: dict) -> dict:
         """
         Allows input schemas to be correctly parsed if uppercase
