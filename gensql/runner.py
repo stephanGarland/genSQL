@@ -1,4 +1,5 @@
 from copy import copy
+import json
 from math import ceil, floor
 from os import urandom
 import random
@@ -227,55 +228,36 @@ class Runner:
                     else:
                         row[col] = "'[]'"
                 else:
-                    # this is a horror show, but it _is_ slightly (4%) faster the built-in json.dumps()
-                    # when 3.12 lands with its dumps() speedup, this can probably go away
-                    json_obj = []
+                    json_dict = {}
+                    # may or may not want to use this again
+                    # json_keys = self.sample(
+                    #    self.wordlist, self.num_rows_wordlist, JSON_OBJ_MAX_KEYS
+                    # )
                     json_keys = copy(JSON_DEFAULT_KEYS)
+                    # grab an extra for use with email if needed
+                    # this is an order of magnitude slower than the sample method - guessing it's all the function calls
+                    # json_indices = frozenset(str(ceil(random.random() * self.num_rows_wordlist)) for x in range(JSON_OBJ_MAX_VALS + 1))
+                    # json_vals = self.utils.get_word(json_indices)
                     json_vals = self.sample(
                         self.wordlist, self.num_rows_wordlist, JSON_OBJ_MAX_VALS + 1
                     )
-                    json_obj.append(f'"{json_keys.pop()}"')
-                    json_obj.append(f'"{json_vals.pop()}",')
+                    json_dict[json_keys.pop()] = json_vals.pop()
                     # make 20% of the JSON objects nested
                     if not self.args.fixed_length:
                         if not idx % 5:
-                            json_obj.append(f'"{json_keys.pop()}"')
-                            json_obj.append(f'"{json_keys.pop()}"')
-                            for _ in range(json_arr_len):
-                                json_obj.append(f'"{json_vals.pop()}",')
+                            key = json_keys.pop()
+                            json_dict[key] = {}
+                            json_dict[key][json_keys.pop()] = [
+                                json_vals.pop() for _ in range(json_arr_len)
+                            ]
                     else:
-                        json_obj.append(f'"{json_keys.pop()}"')
-                        json_obj.append(f'"{json_keys.pop()}"')
-                        for _ in range(json_arr_len):
-                            json_obj.append(f'"{json_vals.pop()}",')
-                    col_json = "'{"
-                    stop_iter = False
-                    json_obj_len = len(json_obj)
-                    for idx, item in enumerate(json_obj):
-                        if idx + 1 == json_obj_len:
-                            stop_iter = True
-                        if item[2] == "_":
-                            if json_obj[idx + 1][2] == "_":
-                                col_json += f"{item}: {{"
-                            else:
-                                col_json += f"{item}: "
-                        else:
-                            if (
-                                not stop_iter
-                                and not json_obj[idx + 1][2] == "_"
-                                and "[" not in col_json
-                            ):
-                                col_json += f"[{item}"
-                            else:
-                                col_json += f"{item}"
-                            if stop_iter:
-                                if "[" in col_json:
-                                    col_json += "]"
-                    for _ in range(max(1, 25 - len(json_keys))):
-                        col_json += "}"
-                    col_json += "'"
-                    col_json = col_json[::-1].replace(",", "", 1)[::-1]
-                    row[col] = col_json
+                        key = json_keys.pop()
+                        json_dict[key] = {}
+                        json_dict[key][json_keys.pop()] = [
+                            json_vals.pop() for _ in range(json_arr_len)
+                        ]
+                    row[col] = f"'{json.dumps(json_dict)}'"
+
             elif col == "city":
                 city = self.sample(list(self.cities), self.num_rows_cities).replace(
                     "'", "''"
