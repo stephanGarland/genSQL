@@ -1,9 +1,9 @@
+from copy import copy
 import json
 from math import ceil, floor
 from os import urandom
 import random
 from pathlib import PurePath
-from string import ascii_lowercase
 import sqlite3
 
 from exceptions.exceptions import (
@@ -15,6 +15,7 @@ from gensql.generator import Generator
 from utilities.constants import (
     DEFAULT_INSERT_CHUNK_SIZE,
     DEFAULT_MAX_FIELD_PCT,
+    JSON_DEFAULT_KEYS,
     JSON_OBJ_MAX_KEYS,
     JSON_OBJ_MAX_VALS,
     MYSQL_INT_MIN_MAX,
@@ -150,12 +151,12 @@ class Runner:
         sample_list = []
         for i in range(num_samples):
             idx = floor(random.random() * num_rows)
-            #idx = self.random_id.allocate()
+            # idx = self.random_id.allocate()
             if num_samples == 1:
-                #self.random_id.release(idx)
+                # self.random_id.release(idx)
                 return iterable[idx]
             sample_list.append(iterable[idx])
-            #self.random_id.release(idx)
+            # self.random_id.release(idx)
         return sample_list
 
     def make_row(self, idx: int, has_timestamp: bool) -> dict:
@@ -232,27 +233,27 @@ class Runner:
                     # json_keys = self.sample(
                     #    self.wordlist, self.num_rows_wordlist, JSON_OBJ_MAX_KEYS
                     # )
-                    json_keys = [f"{x}_key" for x in ascii_lowercase]
+                    json_keys = copy(JSON_DEFAULT_KEYS)
                     # grab an extra for use with email if needed
                     # this is an order of magnitude slower than the sample method - guessing it's all the function calls
-                    #json_indices = frozenset(str(ceil(random.random() * self.num_rows_wordlist)) for x in range(JSON_OBJ_MAX_VALS + 1))
-                    #json_vals = self.utils.get_word(json_indices)
+                    # json_indices = frozenset(str(ceil(random.random() * self.num_rows_wordlist)) for x in range(JSON_OBJ_MAX_VALS + 1))
+                    # json_vals = self.utils.get_word(json_indices)
                     json_vals = self.sample(
                         self.wordlist, self.num_rows_wordlist, JSON_OBJ_MAX_VALS + 1
                     )
-                    json_dict[json_keys.pop(0)] = json_vals.pop()
+                    json_dict[json_keys.pop()] = json_vals.pop()
                     # make 20% of the JSON objects nested
                     if not self.args.fixed_length:
                         if not idx % 5:
-                            key = json_keys.pop(0)
+                            key = json_keys.pop()
                             json_dict[key] = {}
-                            json_dict[key][json_keys.pop(0)] = [
+                            json_dict[key][json_keys.pop()] = [
                                 json_vals.pop() for _ in range(json_arr_len)
                             ]
                     else:
-                        key = json_keys.pop(0)
+                        key = json_keys.pop()
                         json_dict[key] = {}
-                        json_dict[key][json_keys.pop(0)] = [
+                        json_dict[key][json_keys.pop()] = [
                             json_vals.pop() for _ in range(json_arr_len)
                         ]
                     row[col] = f"'{json.dumps(json_dict)}'"
