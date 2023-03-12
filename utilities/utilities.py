@@ -1,9 +1,11 @@
 import argparse
 from collections import deque
 import ctypes
+from functools import cache
 import json
 from os import urandom
 import random
+import sqlite3
 import sys
 from textwrap import dedent
 
@@ -256,7 +258,21 @@ class Help:
 
 class Utilities:
     def __init__(self):
+        # self.conn = sqlite3.connect("db/gensql.db")
+        # self.cursor = self.conn.cursor()
         pass
+
+    @cache
+    def get_country(self, city: str) -> str:
+        # TODO: find a way to not open this every function call,
+        # while also not leaving dangling connections from __init__
+        conn = sqlite3.connect("db/gensql.db")
+        cursor = conn.cursor()
+        query = f"SELECT country FROM cities WHERE city = '{city}' LIMIT 1"
+        cursor.execute(query)
+        result = cursor.fetchone()[0]
+        conn.close()
+        return result
 
     def lowercase_schema(self, schema: dict) -> dict:
         """

@@ -83,5 +83,5 @@ if __name__ == "__main__":
         del tbl_cols[x]
     for x in empty_cols:
         del tbl_cols[x]
-    r = Runner(args, schema_dict, tbl_name, tbl_cols, tbl_create)
+    r = Runner(args, schema_dict, tbl_name, tbl_cols, tbl_create, unique_cols)
     r.run()

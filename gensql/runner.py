@@ -4,15 +4,15 @@ from os import urandom
 import random
 from pathlib import PurePath
 from string import ascii_lowercase
+import sqlite3
 
 from exceptions.exceptions import (
     OutputFilePermissionError,
     OverwriteFileError,
     TooManyRowsError,
 )
+from gensql.generator import Generator
 from utilities.constants import (
-    CITIES_COUNTRIES,
-    COUNTRY_CODES,
     DEFAULT_INSERT_CHUNK_SIZE,
     DEFAULT_MAX_FIELD_PCT,
     JSON_OBJ_MAX_KEYS,
@@ -20,40 +20,57 @@ from utilities.constants import (
     MYSQL_INT_MIN_MAX,
     PHONE_NUMBERS,
 )
-from gensql.generator import Generator
-from utilities import utilities
+from utilities import logger, utilities
 
 
 class Runner:
-    def __init__(self, args, schema, tbl_name, tbl_cols, tbl_create):
+    def __init__(self, args, schema, tbl_name, tbl_cols, tbl_create, unique_cols):
         self.allocator = utilities.Allocator
         self.args = args
+        self.city_country_swapped = False
+        self.logger = logger.Logger().logger
         self.schema = schema
         self.tbl_cols = tbl_cols
         self.tbl_create = tbl_create
         self.tbl_name = tbl_name
-
-        # TODO: speed this up
+        self.utils = utilities.Utilities()
+        self.unique_cols = unique_cols
+        conn = sqlite3.connect("db/gensql.db")
+        cursor = conn.cursor()
         if "country" in self.tbl_cols or "city" in self.tbl_cols:
+            if "country" in self.tbl_cols and "city" in self.tbl_cols:
+                self.city_index = [
+                    i for i, (k, v) in enumerate(self.schema.items()) if k == "city"
+                ][0]
+                self.country_index = [
+                    i for i, (k, v) in enumerate(self.schema.items()) if k == "country"
+                ][0]
+                # city must be evaluated first for proper country selection
+                # but we can swap them back at the end to match the desired schema
+                if self.city_index > self.country_index:
+                    self.logger.info(
+                        "Performing in-memory city/country swap to match schema"
+                    )
+                    self.city_country_swapped = True
+                    temp_schema = list(self.schema.items())
+                    temp_schema[self.city_index], temp_schema[self.country_index] = (
+                        temp_schema[self.country_index],
+                        temp_schema[self.city_index],
+                    )
+                    self.schema = dict(temp_schema)
             if self.args.country and not self.args.country == "random":
-                self.cities = {
-                    k: v
-                    for k, v in CITIES_COUNTRIES.items()
-                    if v == COUNTRY_CODES[self.args.country]
-                }
+                city_query = f"SELECT c.city, c.country FROM cities c WHERE c.country = (SELECT cc.country FROM countries cc WHERE cc.code = '{self.args.country.upper()}')"
+                cursor.execute(city_query)
+                self.cities, self.countries = zip(*cursor.fetchall())
             elif self.args.country == "random" and not "phone" in self.tbl_cols:
-                self.cities = {k: v for k, v in CITIES_COUNTRIES.items()}
+                city_query = "SELECT c.city, c.country FROM cities c"
+                cursor.execute(city_query)
+                self.cities, self.countries = zip(*cursor.fetchall())
             elif self.args.country == "random" and "phone" in self.tbl_cols:
-                valid_countries = {
-                    v for k, v in COUNTRY_CODES.items() if k in PHONE_NUMBERS.keys()
-                }
-                self.cities = {
-                    k: v
-                    for k, v in CITIES_COUNTRIES.items()
-                    if v in [x for x in COUNTRY_CODES.values() if x in valid_countries]
-                }
+                city_query = f"SELECT c.city, c.country FROM cities c WHERE c.country IN ((SELECT cc.country FROM countries cc WHERE cc.code IN ({PHONE_NUMBERS.keys()}))"
+                cursor.execute(city_query)
+                self.cities, self.countries = zip(*cursor.fetchall())
             self.num_rows_cities = len(self.cities)
-
         _has_monotonic = False
         _has_unique = False
 
@@ -124,6 +141,7 @@ class Runner:
                 self.num_rows_lorem_ipsum = len(self.lorem_ipsum)
         except FileNotFoundError as e:
             raise FileNotFoundError(f"unable to load necessary content\n{e}")
+        conn.close()
 
     def sample(
         self, iterable: list, num_rows: int, num_samples: int = 1
@@ -233,24 +251,21 @@ class Runner:
                     row[col] = f"'{json.dumps(json_dict)}'"
 
             elif col == "city":
-                if self.args.country and not self.args.country == "random":
-                    city = self.sample(
-                        list(self.cities.keys()), self.num_rows_cities
-                    ).replace("'", "''")
-                else:
-                    city = self.sample(
-                        list(self.cities.keys()), self.num_rows_cities
-                    ).replace("'", "''")
+                city = self.sample(list(self.cities), self.num_rows_cities).replace(
+                    "'", "''"
+                )
                 row[col] = f"'{city}'"
             elif col == "country":
                 if self.args.country and not self.args.country == "random":
-                    country = list(self.cities.values())[0]
+                    country = self.countries[0]
                 else:
                     try:
-                        country = self.cities[city]
+                        country = self.utils.get_country(city)
                     except (KeyError, UnboundLocalError):
+                        # since city is guaranteed to come first, if this is hit
+                        # there is no city column defined in the schema
                         country = self.sample(
-                            list(self.cities.values()), self.num_rows_cities
+                            list(self.countries), self.num_rows_cities
                         ).replace("'", "''")
                 row[col] = f"'{country}'"
 
@@ -343,12 +358,11 @@ class Runner:
         sql_inserts = []
         random.seed(urandom(4))
         _has_timestamp = any("timestamp" in s.values() for s in self.schema.values())
-        unique_cols = [k for k, v in self.schema.items() if v.get("unique")]
         seen_rows = set()
         for i in range(1, self.args.num + 1):
             row = self.make_row(i, _has_timestamp)
             if not self.args.no_check:
-                for unique in unique_cols:
+                for unique in self.unique_cols:
                     if row[unique] in seen_rows:
                         # TODO: expand this beyond only emails
                         counter = 1
@@ -357,7 +371,9 @@ class Runner:
                         # don't spend forever trying to de-duplicate
                         while new_email in seen_rows:
                             if counter > 9:
-                                self.logger.warning(f"unable to de-duplicate {row[unique]}")
+                                self.logger.warning(
+                                    f"unable to de-duplicate {row[unique]}"
+                                )
                                 break
                             counter += 1
                             new_email = f"{email_split[0]}_{counter}@{email_split[1]}"
@@ -366,6 +382,9 @@ class Runner:
                     else:
                         seen_rows.add(row[unique])
             sql_inserts.append(row)
+        if self.city_country_swapped:
+            for insert in sql_inserts:
+                insert["city"], insert["country"] = insert["country"], insert["city"]
         vals = [",".join(str(v) for v in d.values()) for d in sql_inserts]
         match self.args.filetype:
             case "mysql":
