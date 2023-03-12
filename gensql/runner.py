@@ -143,15 +143,19 @@ class Runner:
             raise FileNotFoundError(f"unable to load necessary content\n{e}")
         conn.close()
 
+    # TODO: try making multiple smaller random id lists to be able to skip random.random() calls
     def sample(
         self, iterable: list, num_rows: int, num_samples: int = 1
     ) -> list[str] | str:
         sample_list = []
         for i in range(num_samples):
             idx = floor(random.random() * num_rows)
+            #idx = self.random_id.allocate()
             if num_samples == 1:
+                #self.random_id.release(idx)
                 return iterable[idx]
             sample_list.append(iterable[idx])
+            #self.random_id.release(idx)
         return sample_list
 
     def make_row(self, idx: int, has_timestamp: bool) -> dict:
@@ -230,6 +234,9 @@ class Runner:
                     # )
                     json_keys = [f"{x}_key" for x in ascii_lowercase]
                     # grab an extra for use with email if needed
+                    # this is an order of magnitude slower than the sample method - guessing it's all the function calls
+                    #json_indices = frozenset(str(ceil(random.random() * self.num_rows_wordlist)) for x in range(JSON_OBJ_MAX_VALS + 1))
+                    #json_vals = self.utils.get_word(json_indices)
                     json_vals = self.sample(
                         self.wordlist, self.num_rows_wordlist, JSON_OBJ_MAX_VALS + 1
                     )
