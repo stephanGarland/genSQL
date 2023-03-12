@@ -1,3 +1,5 @@
+from string import ascii_lowercase
+
 ALLOWED_COLS = [
     "bigint unsigned",
     "bigint",
@@ -31,6 +33,7 @@ ALLOWED_UNIQUES = ["email"]
 DEFAULT_INSERT_CHUNK_SIZE = 10000
 DEFAULT_MAX_FIELD_PCT = 0.15
 
+JSON_DEFAULT_KEYS = [f"{x}_key" for x in ascii_lowercase][::-1]
 JSON_OBJ_MAX_KEYS = 3
 JSON_OBJ_MAX_VALS = 25
 
