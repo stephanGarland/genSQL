@@ -144,19 +144,17 @@ class Runner:
             raise FileNotFoundError(f"unable to load necessary content\n{e}")
         conn.close()
 
-    # TODO: try making multiple smaller random id lists to be able to skip random.random() calls
+    # refactoring this to use allocate() with smaller lists for each type
+    # was significantly slower than the current method - may revisit later
     def sample(
         self, iterable: list, num_rows: int, num_samples: int = 1
     ) -> list[str] | str:
         sample_list = []
         for i in range(num_samples):
             idx = floor(random.random() * num_rows)
-            # idx = self.random_id.allocate()
             if num_samples == 1:
-                # self.random_id.release(idx)
                 return iterable[idx]
             sample_list.append(iterable[idx])
-            # self.random_id.release(idx)
         return sample_list
 
     def make_row(self, idx: int, has_timestamp: bool) -> dict:

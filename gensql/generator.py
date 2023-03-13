@@ -5,6 +5,7 @@ import random
 
 from utilities import logger, utilities
 
+
 class Generator:
     def __init__(self, args):
         self.args = args
@@ -118,9 +119,7 @@ class Generator:
         if pk:
             msg += f"\n  PRIMARY KEY (`{pk}`){',' if uniques else ''}\n"
         else:
-            self.logger.warning(
-                f"no primary key declared!"
-            )
+            self.logger.warning(f"no primary key declared!")
             msg += "\n"
         for i, u in enumerate(uniques, 1):
             msg += f"  UNIQUE KEY {u} (`{u}`)"
@@ -129,6 +128,6 @@ class Generator:
             else:
                 msg += "\n"
         if not pk and not uniques:
-            msg = msg[::-1].replace(",","",1)[::-1]
+            msg = msg[::-1].replace(",", "", 1)[::-1]
         msg += f") ENGINE=InnoDB {'AUTO_INCREMENT=0' if auto_inc_exists else ''} DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;\n"
         return (msg, cols)

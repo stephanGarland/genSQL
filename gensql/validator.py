@@ -5,6 +5,7 @@ from exceptions.exceptions import SchemaValidationError
 from utilities.constants import ALLOWED_COLS, ALLOWED_UNIQUES, MYSQL_INT_MIN_MAX
 from utilities import utilities
 
+
 class Validator:
     def __init__(self, args):
         self.args = args
