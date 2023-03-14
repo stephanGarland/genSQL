@@ -36,6 +36,15 @@ class Runner:
         self.tbl_name = tbl_name
         self.utils = utilities.Utilities()
         self.unique_cols = unique_cols
+
+        self._has_monotonic = False
+        self._has_unique = False
+
+        self._prepare_city_country()
+        self._prepare_schema()
+        self._prepare_allocators()
+
+    def _prepare_city_country(self):
         conn = sqlite3.connect("db/gensql.db")
         cursor = conn.cursor()
         if "country" in self.tbl_cols or "city" in self.tbl_cols:
@@ -49,8 +58,8 @@ class Runner:
                 # city must be evaluated first for proper country selection
                 # but we can swap them back at the end to match the desired schema
                 if self.city_index > self.country_index:
-                    self.logger.info(
-                        "Performing in-memory city/country swap to match schema"
+                    self.logger.debug(
+                        "Performing in-memory city/country swap for performance"
                     )
                     self.city_country_swapped = True
                     temp_schema = list(self.schema.items())
@@ -60,7 +69,9 @@ class Runner:
                     )
                     self.schema = dict(temp_schema)
             if self.args.country and not self.args.country == "random":
-                city_query = f"SELECT c.city, c.country FROM cities c WHERE c.country = (SELECT cc.country FROM countries cc WHERE cc.code = '{self.args.country.upper()}')"
+                city_query = f"""SELECT c.city, c.country FROM cities c WHERE
+                    c.country = (SELECT cc.country FROM countries cc WHERE
+                    cc.code = '{self.args.country.upper()}')"""
                 cursor.execute(city_query)
                 self.cities, self.countries = zip(*cursor.fetchall())
             elif self.args.country == "random" and not "phone" in self.tbl_cols:
@@ -68,54 +79,15 @@ class Runner:
                 cursor.execute(city_query)
                 self.cities, self.countries = zip(*cursor.fetchall())
             elif self.args.country == "random" and "phone" in self.tbl_cols:
-                city_query = f"SELECT c.city, c.country FROM cities c WHERE c.country IN ((SELECT cc.country FROM countries cc WHERE cc.code IN ({PHONE_NUMBERS.keys()}))"
+                city_query = f"""SELECT c.city, c.country FROM cities c WHERE
+                    c.country IN ((SELECT cc.country FROM countries cc WHERE
+                    cc.code IN ({PHONE_NUMBERS.keys()}))"""
                 cursor.execute(city_query)
                 self.cities, self.countries = zip(*cursor.fetchall())
             self.num_rows_cities = len(self.cities)
-        _has_monotonic = False
-        _has_unique = False
+            conn.close()
 
-        # exceeding auto_increment capacity is checked at schema validation, but since
-        # the user can specify --validate without passing --num, uniques have to be checked here
-        numeric_cols = {
-            k: v
-            for k, v in self.schema.items()
-            if "int" in v["type"] or v["type"] in ["decimal", "double", "int"]
-        }
-        for k, v in numeric_cols.items():
-            if "unsigned" in v["type"]:
-                col_max_val = MYSQL_INT_MIN_MAX[
-                    f"MYSQL_MAX_{v['type'].upper().split()[0]}_UNSIGNED"
-                ]
-            elif v["type"] in ["decimal", "double"]:
-                col_max_val = float("inf")
-            else:
-                col_max_val = MYSQL_INT_MIN_MAX[
-                    f"MYSQL_MAX_{v['type'].upper().split()[0]}_SIGNED"
-                ]
-            if v.get("auto_inc"):
-                _has_monotonic = True
-            if v.get("unique"):
-                _has_unique = True
-                self.rand_max_id = self.args.num
-                if self.args.num > col_max_val:
-                    raise TooManyRowsError(k, self.args.num, col_max_val) from None
-            # if uniquity isn't required, and the requested number of rows is greater
-            # than the column can handle, just set it to the column's max since we can repeat
-            else:
-                if self.args.num > col_max_val:
-                    self.rand_max_id = col_max_val
-                else:
-                    self.rand_max_id = self.args.num
-
-        if _has_monotonic:
-            self.monotonic_id = self.allocator(0, self.args.num)
-        try:
-            self.random_id = self.allocator(0, self.rand_max_id, shuffle=True)
-        except AttributeError:
-            self.random_id = self.allocator(0, self.args.num, shuffle=True)
-        if _has_unique:
-            self.unique_id = self.allocator(0, self.args.num, shuffle=True)
+    def _prepare_schema(self):
         try:
             with open("content/dates.txt", "r") as f:
                 self.dates = f.readlines()
@@ -142,7 +114,49 @@ class Runner:
                 self.num_rows_lorem_ipsum = len(self.lorem_ipsum)
         except FileNotFoundError as e:
             raise FileNotFoundError(f"unable to load necessary content\n{e}")
-        conn.close()
+
+    def _prepare_allocators(self):
+        # exceeding auto_increment capacity is checked at schema validation, but since
+        # the user can specify --validate without passing --num, uniques have to be checked here
+        numeric_cols = {
+            k: v
+            for k, v in self.schema.items()
+            if "int" in v["type"] or v["type"] in ["decimal", "double", "int"]
+        }
+        for k, v in numeric_cols.items():
+            if "unsigned" in v["type"]:
+                col_max_val = MYSQL_INT_MIN_MAX[
+                    f"MYSQL_MAX_{v['type'].upper().split()[0]}_UNSIGNED"
+                ]
+            elif v["type"] in ["decimal", "double"]:
+                col_max_val = float("inf")
+            else:
+                col_max_val = MYSQL_INT_MIN_MAX[
+                    f"MYSQL_MAX_{v['type'].upper().split()[0]}_SIGNED"
+                ]
+            if v.get("auto_inc"):
+                self._has_monotonic = True
+            if v.get("unique"):
+                self._has_unique = True
+                self.rand_max_id = self.args.num
+                if self.args.num > col_max_val:
+                    raise TooManyRowsError(k, self.args.num, col_max_val) from None
+            # if uniquity isn't required, and the requested number of rows is greater
+            # than the column can handle, just set it to the column's max since we can repeat
+            else:
+                if self.args.num > col_max_val:
+                    self.rand_max_id = col_max_val
+                else:
+                    self.rand_max_id = self.args.num
+
+        if self._has_monotonic:
+            self.monotonic_id = self.allocator(0, self.args.num)
+        try:
+            self.random_id = self.allocator(0, self.rand_max_id, shuffle=True)
+        except AttributeError:
+            self.random_id = self.allocator(0, self.args.num, shuffle=True)
+        if self._has_unique:
+            self.unique_id = self.allocator(0, self.args.num, shuffle=True)
 
     # refactoring this to use allocate() with smaller lists for each type
     # was significantly slower than the current method - may revisit later
@@ -333,8 +347,8 @@ class Runner:
     def make_sql_rows(self, vals: list) -> list:
         insert_rows = []
         insert_rows.append("SET @@time_zone = '+00:00';\n")
-        insert_rows.append("SET @@autocommit=0;\n")
-        insert_rows.append("SET @@unique_checks=0;\n")
+        insert_rows.append("SET @@autocommit = 0;\n")
+        insert_rows.append("SET @@unique_checks = 0;\n")
         insert_rows.append(f"LOCK TABLES `{self.tbl_name}` WRITE;\n")
         if not self.args.no_chunk:
             for i in range(0, len(vals), DEFAULT_INSERT_CHUNK_SIZE):
@@ -353,9 +367,9 @@ class Runner:
                     f"INSERT INTO `{self.tbl_name}` (`{'`, `'.join(self.tbl_cols)}`) VALUES ({row});\n"
                 )
         insert_rows.append("COMMIT;\n")
-        insert_rows.append("SET @@autocommit=1;\n")
-        insert_rows.append("SET @@unique_checks=1;\n")
-        insert_rows.append("SET @@time_zone=(SELECT @@global.time_zone);\n")
+        insert_rows.append("SET @@autocommit = 1;\n")
+        insert_rows.append("SET @@unique_checks = 1;\n")
+        insert_rows.append("SET @@time_zone = (SELECT @@GLOBAL.time_zone);\n")
         insert_rows.append(f"UNLOCK TABLES;\n")
 
         return insert_rows
@@ -427,12 +441,20 @@ class Runner:
                         ft.writelines(self.tbl_create)
                 f.writelines(lines)
                 if not self.args.quiet and self.args.filetype == "csv":
+                    self.logger.info(
+                        "use the following statements to load your data into MySQL"
+                    )
                     print("SET @@time_zone = '+00:00';")
                     if not self.args.no_check:
-                        print("SET @@unique_checks=0;")
-                    print(
-                        f"LOAD DATA INFILE '{filename}' INTO TABLE `{self.tbl_name}` FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY \"'\" IGNORE 1 LINES (`{'`, `'.join(self.tbl_cols)}`);"
+                        print("SET @@unique_checks = 0;")
+                    csv_load_stmt = (
+                        f"LOAD DATA INFILE '{filename}' INTO TABLE `{self.tbl_name}` "
+                        "FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY \"'\" IGNORE 1 LINES "
+                        f"(`{'`, `'.join(self.tbl_cols)}`);"
                     )
+                    print(csv_load_stmt)
+                    print("SET @@unique_checks = 1;")
+                    print("SET @@time_zone = (SELECT @@GLOBAL.time_zone);")
         except FileExistsError:
             raise OverwriteFileError(filename) from None
         except PermissionError:
