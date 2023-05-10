@@ -7,6 +7,7 @@ from pathlib import PurePath
 import sqlite3
 
 from exceptions.exceptions import (
+    BinaryTypeInCSVError,
     OutputFilePermissionError,
     OverwriteFileError,
     TooManyRowsError,
@@ -36,7 +37,7 @@ class Runner:
         self.tbl_name = tbl_name
         self.utils = utilities.Utilities()
         self.unique_cols = unique_cols
-
+        self.uuid_allocator = utilities.UUIDAllocator
         self._has_monotonic = False
         self._has_unique = False
 
@@ -157,6 +158,12 @@ class Runner:
             self.random_id = self.allocator(0, self.args.num, shuffle=True)
         if self._has_unique:
             self.unique_id = self.allocator(0, self.args.num, shuffle=True)
+        for k, v in self.schema.items():
+            if "uuid" in k:
+                if v.get("uuid_v4", "true") in ("True", "true"):
+                    self.random_uuid = self.uuid_allocator(self.args.num, True)
+                else:
+                    self.random_uuid = self.uuid_allocator(self.args.num, False)
 
     # refactoring this to use allocate() with smaller lists for each type
     # was significantly slower than the current method - may revisit later
@@ -219,6 +226,12 @@ class Runner:
                 full_name = f"{random_last}, {random_first}".replace("'", "''")
                 row[col] = f"'{full_name}'"
 
+            elif col == "uuid":
+                random_uuid = self.random_uuid.allocate()
+                if "char" in opts["type"]:
+                    row[col] = f"'{random_uuid}'"
+                elif "binary" in opts["type"]:
+                    row[col] = f"UUID_TO_BIN('{random_uuid}')"
             elif opts.get("type") == "json":
                 max_rows_pct = float(opts.get("max_length", DEFAULT_MAX_FIELD_PCT))
                 if self.args.random:
@@ -379,6 +392,8 @@ class Runner:
         random.seed(urandom(4))
         _has_timestamp = any("timestamp" in s.values() for s in self.schema.values())
         seen_rows = set()
+        if self.args.filetype == "csv" and any(k for k, v in self.schema.items() if "binary" in v.values()):
+            raise BinaryTypeInCSVError
         for i in range(1, self.args.num + 1):
             row = self.make_row(i, _has_timestamp)
             if not self.args.no_check:

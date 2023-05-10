@@ -3,6 +3,7 @@ from string import ascii_lowercase
 ALLOWED_COLS = [
     "bigint unsigned",
     "bigint",
+    "binary",
     "char",
     "decimal",
     "double",
@@ -15,6 +16,7 @@ ALLOWED_COLS = [
     "smallint",
     "text",
     "timestamp",
+    "varbinary",
     "varchar",
 ]
 
