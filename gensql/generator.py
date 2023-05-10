@@ -79,6 +79,8 @@ class Generator:
                     case "unique":
                         cols[col]["unique"] = True
                         uniques.append(col)
+                    case "uuid_v4":
+                        cols[col]["uuid_v4"] = self.utils.strtobool(v)
                     case _:
                         raise ValueError(f"column attribute {k} is invalid")
             if cols[col]["width"]:

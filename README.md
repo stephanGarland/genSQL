@@ -65,7 +65,8 @@ GenSQL expects a JSON input schema, of the format:
 
 * The `--filetype` flag only supports `csv` and `mysql`. The only supported RDBMS is MySQL (probably 8.x; it _might_ work with 5.7.8 if you want a JSON column, and earlier if you don't).
 * Generated datetimes are in UTC, i.e. no DST events exist. If you remove the query to set the session's timezone, you may have a bad time.
-* This uses a C library to perform random shuffles. There are no external libraries, so as long as you have a reasonably new compiler, `make` should work for you.
+* This uses a C library for a few functions, notably filling large arrays and shuffling them. For UUID creation, the library <uuid/uuid.h> is required to build the shared library.
+* Currently, generating UUIDs only supports v1 and v4, and if they're to be stored as `BINARY` types, only .sql file format is supported. Also as an aside, it's a terrible idea to use a UUID (at least v4) as a PK in InnoDB, so please be sure of what you're doing. If you don't believe me, generate one, and another using a monotonic integer or something similar, and compare on-disk sizes for the tablespaces.
 * `--force` and `--drop-table` have warnings for a reason. If you run a query with `DROP TABLE IF EXISTS`, please be sure of what you're doing.
 * `--random` allows for TEXT and JSON columns to have varying amounts of length, which may or may not matter to you. It will cause a ~10% slowdown. If not selected, a deterministic 20% of the rows in these columns will have a longer length than the rest. If this also bothers you, use `--fixed-length`.
 * `--generate-dates` takes practically the same amount of time, or slightly longer, than just having them generated on-demand. It's useful if you want to have the same set of datetimes for a series of tables, although their actual ordering for row generation will remain random.

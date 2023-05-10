@@ -126,7 +126,7 @@ class Validator:
                     v,
                     f"{col_default} is not a valid default value for column `{k}` of type `{col_type}`",
                 )
-            if col_width and "char" not in col_type:
+            if col_width and "char" not in col_type and "binary" not in col_type:
                 _add_error(
                     errors,
                     (k, "width"),

@@ -8,6 +8,20 @@ class BaseError(Exception):
     """Base class for GenSQL exceptions"""
 
 
+class BinaryTypeInCSVError(BaseError):
+    """Was asked to create a CSV file containing binary data"""
+
+    def __init__(self, msg=None):
+        if msg:
+            self.msg = msg
+        else:
+            self.msg = f"creating CSV files with binary data is not yet supported"
+        super(BinaryTypeInCSVError, self).__init__(self.msg)
+
+    def __reduce__(self):
+        return (BinaryTypeInCSVError, self.msg)
+
+
 class SchemaValidationError(BaseError):
     """The provided schema is incorrectly formatted"""
 

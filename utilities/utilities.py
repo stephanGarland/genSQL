@@ -9,6 +9,30 @@ import sqlite3
 import sys
 from textwrap import dedent
 
+class UUIDAllocator:
+    def __init__(self, num: int, use_uuid_v4: bool = True):
+        try:
+            self.lib = ctypes.CDLL("./library/uuid.so")
+        except OSError as e:
+            raise SystemExit(
+                f"FATAL: couldn't load C library - run make\n\n{e}"
+            ) from None
+        self.lib.fill_array.argtypes = [ctypes.c_int]
+        self.lib.fill_array.restype = ctypes.POINTER(ctypes.c_char_p)
+        self.num = num
+        if use_uuid_v4:
+            self.uuid_ptr = self.lib.fill_array(self.num, True)
+        else:
+            self.uuid_ptr = self.lib.fill_array(self.num, False)
+        self.uuid_list = [self.uuid_ptr[i].decode() for i in range(self.num)]
+        self.uuids = deque(self.uuid_list)
+
+    def allocate(self) -> str | None:
+        try:
+            return self.uuids.popleft()
+        except IndexError:
+            return None
+
 
 class Allocator:
     def __init__(
