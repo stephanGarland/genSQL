@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <uuid/uuid.h>
 
-#define UUID_STR_LEN 36
+#define UUID_STR_LEN 37
 
 #define lowercaseuuid true
 
