@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <uuid/uuid.h>
 
+#define UUID_STR_LEN 37
+
 #define lowercaseuuid true
 
 char **fill_array (uint32_t size, bool use_v4) {
@@ -26,4 +28,3 @@ char **fill_array (uint32_t size, bool use_v4) {
     }
     return arr;
 }
-

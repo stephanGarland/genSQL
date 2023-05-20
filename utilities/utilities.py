@@ -17,7 +17,7 @@ class UUIDAllocator:
             raise SystemExit(
                 f"FATAL: couldn't load C library - run make\n\n{e}"
             ) from None
-        self.lib.fill_array.argtypes = [ctypes.c_int]
+        self.lib.fill_array.argtypes = [ctypes.c_int, ctypes.c_bool]
         self.lib.fill_array.restype = ctypes.POINTER(ctypes.c_char_p)
         self.num = num
         if use_uuid_v4:
