@@ -3,7 +3,7 @@ import json
 from math import ceil, floor
 from os import urandom
 import random
-from pathlib import PurePath
+from pathlib import Path, PurePath
 import sqlite3
 
 from exceptions.exceptions import (
@@ -392,8 +392,32 @@ class Runner:
         random.seed(urandom(4))
         _has_timestamp = any("timestamp" in s.values() for s in self.schema.values())
         seen_rows = set()
-        if self.args.filetype == "csv" and any(k for k, v in self.schema.items() if "binary" in v.values()):
-            raise BinaryTypeInCSVError
+        # check here so we can bail early before attempting to write files if needed
+        match self.args.filetype:
+            case "mysql":
+                try:
+                    filename = f"{PurePath(self.args.output).with_suffix('.sql')}"
+                except TypeError:
+                    try:
+                        filename = f"{PurePath(self.args.input).stem}.sql"
+                    except TypeError:
+                        filename = "gensql.sql"
+                if Path(f"schema_outputs/{filename}").exists() and not self.args.force:
+                    raise OverwriteFileError(filename) from None
+            case "csv":
+                try:
+                    filename = f"{PurePath(self.args.output).with_suffix('.csv')}"
+                except TypeError:
+                    try:
+                        filename = f"{PurePath(self.args.input).stem}.csv"
+                    except TypeError:
+                        filename = "gensql.csv"
+                if any (k for k, v in self.schema.items() if "binary" in v.values()):
+                    raise BinaryTypeInCSVError() from None
+                if Path(f"schema_outputs/{filename}").exists() and not self.args.force:
+                    raise OverwriteFileError(filename) from None
+            case _:
+                raise ValueError(f"{self.args.filetype} is not a valid output format")
         for i in range(1, self.args.num + 1):
             row = self.make_row(i, _has_timestamp)
             if not self.args.no_check:
@@ -424,22 +448,9 @@ class Runner:
         match self.args.filetype:
             case "mysql":
                 lines = self.make_sql_rows(vals)
-                try:
-                    filename = f"{PurePath(self.args.output).with_suffix('.sql')}"
-                except TypeError:
-                    try:
-                        filename = f"{PurePath(self.args.input).stem}.sql"
-                    except TypeError:
-                        filename = "gensql.sql"
             case "csv":
                 lines = self.make_csv_rows(vals)
-                try:
-                    filename = f"{PurePath(self.args.output).with_suffix('.csv')}"
-                except TypeError:
-                    try:
-                        filename = f"{PurePath(self.args.input).stem}.csv"
-                    except TypeError:
-                        filename = "gensql.csv"
+            # TODO: don't double this up
             case _:
                 raise ValueError(f"{self.args.filetype} is not a valid output format")
         try:
