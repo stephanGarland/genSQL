@@ -40,6 +40,7 @@ options:
 
 ### Usage example
 
+0. Either build the C libraries with `make`, or execute `run.sh` to symlink the correct file for your arch, if available.
 1. Create a schema if you'd like, or use the included examples.
 
 ```
