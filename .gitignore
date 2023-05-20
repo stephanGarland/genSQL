@@ -173,3 +173,4 @@ poetry.toml
 *.sql
 *.gz
 library/fast_shuffle.so
+library/uuid.so
