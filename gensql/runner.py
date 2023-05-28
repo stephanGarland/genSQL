@@ -38,6 +38,7 @@ class Runner:
         self.utils = utilities.Utilities()
         self.unique_cols = unique_cols
         self.uuid_allocator = utilities.UUIDAllocator
+        self._has_float = False
         self._has_monotonic = False
         self._has_unique = False
 
@@ -131,6 +132,7 @@ class Runner:
                 ]
             elif v["type"] in ["decimal", "double"]:
                 col_max_val = float("inf")
+                self._has_float = True
             else:
                 col_max_val = MYSQL_INT_MIN_MAX[
                     f"MYSQL_MAX_{v['type'].upper().split()[0]}_SIGNED"
@@ -150,6 +152,9 @@ class Runner:
                 else:
                     self.rand_max_id = self.args.num
 
+        if self._has_float:
+            self.float_whole_id = self.allocator(0, self.args.num, shuffle=True)
+            self.float_fractional_id = self.allocator(0, 999999, ranged_arr=True, shuffle=True)
         if self._has_monotonic:
             self.monotonic_id = self.allocator(0, self.args.num)
         try:
@@ -200,15 +205,15 @@ class Runner:
             elif opts.get("type") in ["decimal", "double"]:
                 # TODO: Figure out why this fails with unique checks
                 if opts.get("unique"):
-                    whole = self.unique_id.allocate()
-                    fractional = str(idx)[0]
-                    row[col] = f"'{whole}.{fractional}{whole}'"
-                    self.unique_id.release(whole)
+                    whole = self.float_whole_id.allocate()
+                    fractional = self.float_fractional_id.allocate()
+                    row[col] = f"{whole}.{fractional}"
                 else:
-                    whole = self.random_id.allocate()
-                    fractional = str(idx)[0]
-                    row[col] = f"'{whole}.{fractional}{whole}'"
-                    self.random_id.release(whole)
+                    whole = self.float_whole_id.allocate()
+                    fractional = self.float_fractional_id.allocate()
+                    row[col] = f"'{whole}.{fractional}'"
+                    self.float_whole_id.release(whole)
+                    self.float_fractional_id.release(fractional)
 
             elif col == "first_name":
                 random_first = self.sample(self.first_names, self.num_rows_first_names)
