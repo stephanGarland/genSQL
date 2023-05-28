@@ -51,6 +51,8 @@ class Allocator:
             ) from None
         self.lib.fill_array.argtypes = [ctypes.c_uint32]
         self.lib.fill_array.restype = ctypes.POINTER(ctypes.c_uint32)
+        self.lib.fill_array_range.argtypes = [ctypes.c_uint32, ctypes.c_uint32]
+        self.lib.fill_array_range.restype = ctypes.POINTER(ctypes.c_uint32)
         self.lib.shuf.argtypes = [
             ctypes.POINTER(ctypes.c_uint32),
             ctypes.c_uint32,
