@@ -154,7 +154,9 @@ class Runner:
 
         if self._has_float:
             self.float_whole_id = self.allocator(0, self.args.num, shuffle=True)
-            self.float_fractional_id = self.allocator(0, 999999, ranged_arr=True, shuffle=True)
+            self.float_fractional_id = self.allocator(
+                0, 999999, ranged_arr=True, shuffle=True
+            )
         if self._has_monotonic:
             self.monotonic_id = self.allocator(0, self.args.num)
         try:
@@ -417,7 +419,7 @@ class Runner:
                         filename = f"{PurePath(self.args.input).stem}.csv"
                     except TypeError:
                         filename = "gensql.csv"
-                if any (k for k, v in self.schema.items() if "binary" in v.values()):
+                if any(k for k, v in self.schema.items() if "binary" in v.values()):
                     raise BinaryTypeInCSVError() from None
                 if Path(f"schema_outputs/{filename}").exists() and not self.args.force:
                     raise OverwriteFileError(filename) from None
