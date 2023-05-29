@@ -85,8 +85,13 @@ class Generator:
                         raise ValueError(f"column attribute {k} is invalid")
             if cols[col]["width"]:
                 cols[col]["type"] = f"{cols[col]['type']} ({cols[col]['width']})"
-            if self.utils.strtobool(col_attributes.get("nullable", "true")):
-                col_opts.append("NULL")
+            if self.utils.strtobool(col_attributes.get("nullable", "true")) and not cols[col]["pk"]:
+                if not cols[col]["pk"]:
+                    col_opts.append("NULL")
+                # this shouldn't be reached due to schema validation, but just in case
+                else:
+                    self.logger.warning("cannot declare primary key as nullable")
+                    col_opts.append("NOT NULL")
             else:
                 col_opts.append("NOT NULL")
             col_default = col_attributes.get("default")
