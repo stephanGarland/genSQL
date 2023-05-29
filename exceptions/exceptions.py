@@ -34,6 +34,7 @@ class SchemaValidationError(BaseError):
         for schema_col, schema_col_props in errors["schema"].items():
             for err, err_col_props in errors.items():
                 # \u274c == red cross mark
+                # \U0001F53B == down-pointing red triangle
                 err_col_prop_key = f"\u274c {err[1]}"
                 err_message_key = f"\U0001F53B error"
                 if err_col_props == schema_col_props:
