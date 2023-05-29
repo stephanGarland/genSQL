@@ -11,6 +11,38 @@ class Validator:
         self.args = args
         self.utils = utilities.Utilities()
 
+    def show_json_error(self, schema_filename: str | PurePath, e: json.JSONDecodeError):
+        """
+        Attempts to show the location in an input schema where
+        a JSONDecodeError occurred.
+        """
+
+        _json_property_err = False
+        _json_delimiter_err = False
+
+        err_msg = "ERROR: unable to parse JSON - "
+        # probable cause is a trailing comma after the last item
+        if "property name" in e.msg:
+            _json_property_err = True
+            err_msg += "check for trailing commas"
+        # probable cause is a missing colon delimiter between k:v
+        elif "delimiter" in e.msg:
+            _json_delimiter_err = True
+            err_msg += "check for missing colons"
+        print(err_msg)
+        with open(schema_filename, "r") as f:
+            err_json = f.read().splitlines()
+        for i, line in enumerate(err_json, start=1):
+            if i == e.lineno - 1:
+                if _json_property_err:
+                    # \u274c == red cross mark
+                    print(f"{i:03}: {line} \u274c")
+            elif i == e.lineno and _json_delimiter_err:
+                print(f"{i:03}: {line} \u274c")
+            else:
+                print(f"{i:03}: {line}")
+        raise SystemExit(1)
+
     def parse_schema(self) -> dict[str, dict[str, str]]:
         """
         Parses input schema in JSON format and returns
@@ -31,7 +63,7 @@ class Validator:
                 try:
                     schema = json.loads(f.read())
                 except json.JSONDecodeError as e:
-                    raise SystemExit(f"Error decoding schema\n{e}")
+                    self.show_json_error(filename, e)
         except FileNotFoundError as e:
             raise FileNotFoundError(
                 f"input schema {self.args.input} not found - generate one with the -g arg\n{e}"
