@@ -1,0 +1,24 @@
+{
+    "id": {
+        "type": "int unsigned",
+        "nullable": "false",
+        "auto_increment": "true",
+        "primary_key": "true"
+    },
+    "uuid": {
+        "type": "char",
+        "width": "36",
+        "nullable": "false",
+        "uuid_v4": "true"
+    },
+    "first_name": {
+        "type": "varchar",
+        "width": "255",
+        "nullable": "false"
+    },
+    "last_name": {
+        "type": "varchar",
+        "width": "255",
+        "nullable": "false"
+    }
+}

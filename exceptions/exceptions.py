@@ -8,6 +8,20 @@ class BaseError(Exception):
     """Base class for GenSQL exceptions"""
 
 
+class BinaryTypeInCSVError(BaseError):
+    """Was asked to create a CSV file containing binary data"""
+
+    def __init__(self, msg=None):
+        if msg:
+            self.msg = msg
+        else:
+            self.msg = f"creating CSV files with binary data is not yet supported"
+        super(BinaryTypeInCSVError, self).__init__(self.msg)
+
+    def __reduce__(self):
+        return (BinaryTypeInCSVError, self.msg)
+
+
 class SchemaValidationError(BaseError):
     """The provided schema is incorrectly formatted"""
 
@@ -20,12 +34,19 @@ class SchemaValidationError(BaseError):
         for schema_col, schema_col_props in errors["schema"].items():
             for err, err_col_props in errors.items():
                 # \u274c == red cross mark
+                # \U0001F53B == down-pointing red triangle
                 err_col_prop_key = f"\u274c {err[1]}"
+                err_message_key = f"\U0001F53B error"
                 if err_col_props == schema_col_props:
+                    output_dict[err[0]][err_message_key] = output_dict[err[0]]["error"]
                     output_dict[err[0]][err_col_prop_key] = output_dict[err[0]][err[1]]
                     del output_dict[err[0]][err[1]]
+                    del output_dict[err[0]]["error"]
         super(SchemaValidationError, self).__init__(self.msg)
-        pprint(output_dict, sort_dicts=False)
+        pprint(output_dict, sort_dicts=False, width=120)
+
+    def __reduce__(self):
+        return (SchemaValidationError, self.msg)
 
 
 class OutputFilePermissionError(BaseError):
@@ -86,4 +107,19 @@ class TooManyRowsError(BaseError):
         super(TooManyRowsError, self).__init__(self.msg)
 
     def __reduce__(self):
-        return (OverwriteFileError, self.msg)
+        return (TooManyRowsError, self.msg)
+
+
+class UnsupportedRDBMSError(BaseError):
+    """The selected RDBMS is not supported"""
+
+    def __init__(self, sql_type, msg=None):
+        self.sql_type = sql_type
+        if msg:
+            self.msg = msg
+        else:
+            self.msg = f"{sql_type} is not a supported RDBMS"
+        super(UnsupportedRDBMSError, self).__init__(self.msg)
+
+    def __reduce__(self):
+        return (UnsupportedRDBMSError, self.msg)

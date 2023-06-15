@@ -1,0 +1,40 @@
+{
+   "user_id": {
+      "type": "bigint unsigned",
+      "nullable": "false",
+      "auto_increment": "true",
+      "primary_key": "true"
+   },
+   "first_name": {
+      "type": "varchar",
+      "width": "255",
+      "nullable": "false"
+   },
+   "last_name": {
+      "type": "varchar",
+      "width": "255"
+   },
+   "email": {
+      "type": "varchar",
+      "width": "255",
+      "unique": "true"
+   },
+   "city": {
+      "type": "varchar",
+      "width": "255"
+   },
+   "country": {
+      "type": "varchar",
+      "width": "255"
+   },
+   "created_at": {
+      "type": "timestamp",
+      "nullable": "false",
+      "default": "static_now()"
+   },
+   "last_updated_at": {
+      "type": "timestamp",
+      "default": "null_now()",
+      "is_empty": "true"
+   }
+}

@@ -1,7 +1,41 @@
+from string import ascii_lowercase
+
+ALLOWED_COLS = [
+    "bigint unsigned",
+    "bigint",
+    "binary",
+    "char",
+    "decimal",
+    "double",
+    "email",
+    "int unsigned",
+    "int",
+    "json",
+    "phone",
+    "smallint unsigned",
+    "smallint",
+    "text",
+    "timestamp",
+    "varbinary",
+    "varchar",
+]
+
+ALLOWED_UNIQUES = ["email"]
+
+# CITIES_COUNTRIES = {
+#    x.split(",")[0]: x.split(",")[1]
+#    for x in open("content/cities_countries.txt").read().splitlines()
+# }
+
+# COUNTRY_CODES = {
+#    x.split(",")[1].lower(): x.split(",")[0]
+#    for x in open("content/country_codes.txt").read().splitlines()
+# }
+
 DEFAULT_INSERT_CHUNK_SIZE = 10000
 DEFAULT_MAX_FIELD_PCT = 0.15
-DEFAULT_VARYING_LENGTH = True
 
+JSON_DEFAULT_KEYS = [f"{x}_key" for x in ascii_lowercase][::-1]
 JSON_OBJ_MAX_KEYS = 3
 JSON_OBJ_MAX_VALS = 25
 
@@ -11,11 +45,11 @@ MYSQL_INT_MIN_MAX = {
     "MYSQL_MIN_SMALLINT_SIGNED": -(2**15),
     "MYSQL_MAX_SMALLINT_SIGNED": ~-(2**15),
     "MYSQL_MIN_MEDINT_SIGNED": -(2**23),
-    "MYSQL_MAX_MEDINT_SIGNED": ~-(2 * 23),
+    "MYSQL_MAX_MEDINT_SIGNED": ~-(2**23),
     "MYSQL_MIN_INT_SIGNED": -(2**31),
     "MYSQL_MAX_INT_SIGNED": ~-(2**31),
     "MYSQL_MIN_BIGINT_SIGNED": -(2**63),
-    "MYSQL_MAX_BIGINT_SIGNED": ~-(2 * 63),
+    "MYSQL_MAX_BIGINT_SIGNED": ~-(2**63),
     "MYSQL_MAX_TINYINT_UNSIGNED": ~-(2**8),
     "MYSQL_MAX_SMALLINT_UNSIGNED": ~-(2**16),
     "MYSQL_MAX_MEDINT_UNSIGNED": ~-(2**24),
@@ -23,7 +57,7 @@ MYSQL_INT_MIN_MAX = {
     "MYSQL_MAX_BIGINT_UNSIGNED": ~-(2**64),
 }
 
-PHONE_NUMBER = {
+PHONE_NUMBERS = {
     "au": lambda x: f"+61 02 {x[0:4]} {x[5:9]}",
     "de": lambda x: f"+49 030 {x[0:6]}-{x[6:8]}",
     "fr": lambda x: f"+33 01 {x[0:2]} {x[2:4]} {x[4:6]} {x[6:8]}",
