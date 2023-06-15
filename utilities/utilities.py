@@ -9,6 +9,7 @@ import sqlite3
 import sys
 from textwrap import dedent
 
+
 class UUIDAllocator:
     def __init__(self, num: int, use_uuid_v4: bool = True):
         try:
@@ -119,7 +120,7 @@ class Args:
         parser.add_argument(
             "-f",
             "--filetype",
-            choices=["csv", "mysql", "postgresql", "sqlserver"],
+            choices=["csv", "mysql", "postgres"],
             default="mysql",
             help="Filetype to generate",
         )
