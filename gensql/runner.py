@@ -11,6 +11,7 @@ from exceptions.exceptions import (
     OutputFilePermissionError,
     OverwriteFileError,
     TooManyRowsError,
+    UnsupportedRDBMSError,
 )
 from gensql.generator import Generator
 from utilities.constants import (
@@ -364,33 +365,58 @@ class Runner:
 
         return insert_rows
 
-    def make_sql_rows(self, vals: list) -> list:
+    def make_sql_rows(self, vals: list, sql_type: str) -> list:
         insert_rows = []
-        insert_rows.append("SET @@time_zone = '+00:00';\n")
-        insert_rows.append("SET @@autocommit = 0;\n")
-        insert_rows.append("SET @@unique_checks = 0;\n")
-        insert_rows.append(f"LOCK TABLES `{self.tbl_name}` WRITE;\n")
-        if not self.args.no_chunk:
-            for i in range(0, len(vals), DEFAULT_INSERT_CHUNK_SIZE):
-                insert_rows.append(
-                    f"INSERT INTO `{self.tbl_name}` (`{'`, `'.join(self.tbl_cols)}`) VALUES\n"
-                )
-                chunk_list = vals[i : i + DEFAULT_INSERT_CHUNK_SIZE]
-                for row in chunk_list:
-                    insert_rows.append(f"({row}),\n")
-                # if we reach the end of a chunk list, make the multi-insert statement a single
-                # query by swapping the last comma to a semi-colon
-                insert_rows[-1] = insert_rows[-1][::-1].replace(",", ";", 1)[::-1]
+        if sql_type == "mysql":
+            insert_rows.append("SET @@time_zone = '+00:00';\n")
+            insert_rows.append("SET @@autocommit = 0;\n")
+            insert_rows.append("SET @@unique_checks = 0;\n")
+            insert_rows.append(f"LOCK TABLES `{self.tbl_name}` WRITE;\n")
+            if not self.args.no_chunk:
+                for i in range(0, len(vals), DEFAULT_INSERT_CHUNK_SIZE):
+                    insert_rows.append(
+                        f"INSERT INTO `{self.tbl_name}` (`{'`, `'.join(self.tbl_cols)}`) VALUES\n"
+                    )
+                    chunk_list = vals[i : i + DEFAULT_INSERT_CHUNK_SIZE]
+                    for row in chunk_list:
+                        insert_rows.append(f"({row}),\n")
+                    # if we reach the end of a chunk list, make the multi-insert statement a single
+                    # query by swapping the last comma to a semi-colon
+                    insert_rows[-1] = insert_rows[-1][::-1].replace(",", ";", 1)[::-1]
+            else:
+                for row in vals:
+                    insert_rows.append(
+                        f"INSERT INTO `{self.tbl_name}` (`{'`, `'.join(self.tbl_cols)}`) VALUES ({row});\n"
+                    )
+        elif sql_type == "postgres":
+            insert_rows.append("BEGIN;\n")
+            insert_rows.append(
+                f"LOCK TABLE {self.tbl_name} IN ACCESS EXCLUSIVE MODE;\n"
+            )
+            if not self.args.no_chunk:
+                for i in range(0, len(vals), DEFAULT_INSERT_CHUNK_SIZE):
+                    insert_rows.append(
+                        f"INSERT INTO {self.tbl_name} ({', '.join(self.tbl_cols)}) VALUES\n"
+                    )
+                    chunk_list = vals[i : i + DEFAULT_INSERT_CHUNK_SIZE]
+                    for row in chunk_list:
+                        insert_rows.append(f"({row}),\n")
+                    # if we reach the end of a chunk list, make the multi-insert statement a single
+                    # query by swapping the last comma to a semi-colon
+                    insert_rows[-1] = insert_rows[-1][::-1].replace(",", ";", 1)[::-1]
+            else:
+                for row in vals:
+                    insert_rows.append(
+                        f"INSERT INTO {self.tbl_name} ({', '.join(self.tbl_cols)}) VALUES ({row});\n"
+                    )
         else:
-            for row in vals:
-                insert_rows.append(
-                    f"INSERT INTO `{self.tbl_name}` (`{'`, `'.join(self.tbl_cols)}`) VALUES ({row});\n"
-                )
+            raise UnsupportedRDBMSError(sql_type) from None
         insert_rows.append("COMMIT;\n")
-        insert_rows.append("SET @@autocommit = 1;\n")
-        insert_rows.append("SET @@unique_checks = 1;\n")
-        insert_rows.append("SET @@time_zone = (SELECT @@GLOBAL.time_zone);\n")
-        insert_rows.append(f"UNLOCK TABLES;\n")
+        if sql_type == "mysql":
+            insert_rows.append("SET @@autocommit = 1;\n")
+            insert_rows.append("SET @@unique_checks = 1;\n")
+            insert_rows.append("SET @@time_zone = (SELECT @@GLOBAL.time_zone);\n")
+            insert_rows.append("UNLOCK TABLES;\n")
 
         return insert_rows
 
@@ -401,7 +427,7 @@ class Runner:
         seen_rows = set()
         # check here so we can bail early before attempting to write files if needed
         match self.args.filetype:
-            case "mysql":
+            case "mysql" | "postgres":
                 try:
                     filename = f"{PurePath(self.args.output).with_suffix('.sql')}"
                 except TypeError:
@@ -454,7 +480,9 @@ class Runner:
         vals = [",".join(str(v) for v in d.values()) for d in sql_inserts]
         match self.args.filetype:
             case "mysql":
-                lines = self.make_sql_rows(vals)
+                lines = self.make_sql_rows(vals, "mysql")
+            case "postgres":
+                lines = self.make_sql_rows(vals, "postgres")
             case "csv":
                 lines = self.make_csv_rows(vals)
             # TODO: don't double this up
