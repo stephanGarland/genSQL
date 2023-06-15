@@ -48,6 +48,7 @@ class SchemaValidationError(BaseError):
     def __reduce__(self):
         return (SchemaValidationError, self.msg)
 
+
 class OutputFilePermissionError(BaseError):
     """Lack permissions to write file to desired path"""
 
@@ -106,4 +107,19 @@ class TooManyRowsError(BaseError):
         super(TooManyRowsError, self).__init__(self.msg)
 
     def __reduce__(self):
-        return (OverwriteFileError, self.msg)
+        return (TooManyRowsError, self.msg)
+
+
+class UnsupportedRDBMSError(BaseError):
+    """The selected RDBMS is not supported"""
+
+    def __init__(self, sql_type, msg=None):
+        self.sql_type = sql_type
+        if msg:
+            self.msg = msg
+        else:
+            self.msg = f"{sql_type} is not a supported RDBMS"
+        super(UnsupportedRDBMSError, self).__init__(self.msg)
+
+    def __reduce__(self):
+        return (UnsupportedRDBMSError, self.msg)
