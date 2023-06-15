@@ -1,0 +1,19 @@
+{
+    "uuid": {
+        "type": "binary",
+        "width": "16",
+        "nullable": "false",
+        "primary_key": "true",
+        "uuid_v4": "true"
+    },
+    "first_name": {
+        "type": "varchar",
+        "width": "255",
+        "nullable": "false"
+    },
+    "last_name": {
+        "type": "varchar",
+        "width": "255",
+        "nullable": "false"
+    }
+}

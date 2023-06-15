@@ -1,18 +1,19 @@
-
 {
     "user_id": {
         "type": "bigint unsigned",
-        "nullable": "false",
-        "auto increment": "true",
-        "primary key": "true"
+        "nullable": "true",
+        "auto_increment": "true",
+        "primary_key": "true"
     },
-    "full_name": {
+    "name": {
         "type": "varchar",
         "width": "255",
+        "auto_increment": "true",
         "nullable": "false"
     },
     "external_id": {
         "type": "bigint unsigned",
+        "width": "255",
         "nullable": "false",
         "unique": "true",
         "default": "0"
@@ -20,6 +21,12 @@
     "last_modified": {
         "type": "timestamp",
         "nullable": "true",
-        "default": "null"
+        "default": "NULL"
+    },
+    "extra_pk": {
+        "type": "bigint unsigned",
+        "nullable": "false",
+        "auto_increment": "false",
+        "primary_key": "true"
     }
 }

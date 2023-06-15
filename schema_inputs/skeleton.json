@@ -1,15 +1,14 @@
-
 {
     "user_id": {
         "type": "bigint unsigned",
         "nullable": "false",
-        "auto increment": "true",
-        "primary key": "true"
+        "auto_increment": "true",
+        "primary_key": "true"
     },
-    "phone": {
+    "full_name": {
         "type": "varchar",
         "width": "255",
-        "nullable": "true"
+        "nullable": "false"
     },
     "external_id": {
         "type": "bigint unsigned",
@@ -19,7 +18,7 @@
     },
     "last_modified": {
         "type": "timestamp",
-        "nullable": "true",
-        "default": "null"
+        "nullable": "false",
+        "default": "now()"
     }
 }

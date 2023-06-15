@@ -1,11 +1,38 @@
 import argparse
 from collections import deque
 import ctypes
+from functools import cache
 import json
 from os import urandom
 import random
+import sqlite3
 import sys
 from textwrap import dedent
+
+
+class UUIDAllocator:
+    def __init__(self, num: int, use_uuid_v4: bool = True):
+        try:
+            self.lib = ctypes.CDLL("./library/uuid.so")
+        except OSError as e:
+            raise SystemExit(
+                f"FATAL: couldn't load C library - run make\n\n{e}"
+            ) from None
+        self.lib.fill_array.argtypes = [ctypes.c_int, ctypes.c_bool]
+        self.lib.fill_array.restype = ctypes.POINTER(ctypes.c_char_p)
+        self.num = num
+        if use_uuid_v4:
+            self.uuid_ptr = self.lib.fill_array(self.num, True)
+        else:
+            self.uuid_ptr = self.lib.fill_array(self.num, False)
+        self.uuid_list = [self.uuid_ptr[i].decode() for i in range(self.num)]
+        self.uuids = deque(self.uuid_list)
+
+    def allocate(self) -> str | None:
+        try:
+            return self.uuids.popleft()
+        except IndexError:
+            return None
 
 
 class Allocator:
@@ -25,6 +52,8 @@ class Allocator:
             ) from None
         self.lib.fill_array.argtypes = [ctypes.c_uint32]
         self.lib.fill_array.restype = ctypes.POINTER(ctypes.c_uint32)
+        self.lib.fill_array_range.argtypes = [ctypes.c_uint32, ctypes.c_uint32]
+        self.lib.fill_array_range.restype = ctypes.POINTER(ctypes.c_uint32)
         self.lib.shuf.argtypes = [
             ctypes.POINTER(ctypes.c_uint32),
             ctypes.c_uint32,
@@ -69,13 +98,10 @@ class Args:
             help="Print extended help",
         )
         parser.add_argument(
-            "-c", "--chunk", action="store_true", help="Chunk SQL INSERT statements"
-        )
-        parser.add_argument(
             "--country",
-            choices=["au", "de", "fr", "ke", "jp", "mx", "ua", "uk", "us"],
-            default="us",
-            help="The country's phone number structure to use if generating phone numbers",
+            choices=["random", "au", "de", "fr", "gb", "ke", "jp", "mx", "ua", "us"],
+            default="random",
+            help="A specific country (or random) to use for cities, phone numbers, etc.",
         )
         parser.add_argument(
             "-d", "--debug", action="store_true", help="Print tracebacks for errors"
@@ -94,9 +120,15 @@ class Args:
         parser.add_argument(
             "-f",
             "--filetype",
-            choices=["csv", "mysql", "postgresql", "sqlserver"],
+            choices=["csv", "mysql", "postgres"],
             default="mysql",
             help="Filetype to generate",
+        )
+        parser.add_argument(
+            "--fixed-length",
+            action="store_true",
+            dest="fixed_length",
+            help="Disable any variations in length for JSON arrays, text, etc.",
         )
         parser.add_argument(
             "--generate-dates",
@@ -113,16 +145,44 @@ class Args:
         )
         parser.add_argument("-i", "--input", help="Input schema (JSON)")
         parser.add_argument(
-            "-n", "--num", type=int, default=1000, help="The number of rows to generate"
+            "--no-check",
+            action="store_true",
+            dest="no_check",
+            help="Do not perform validation checks for unique columns",
         )
-        parser.add_argument("-o", "--output", help="Output filename")
+        parser.add_argument(
+            "--no-chunk",
+            action="store_true",
+            dest="no_chunk",
+            help="Do not chunk SQL INSERT statements",
+        )
+        parser.add_argument(
+            "-n",
+            "--num",
+            type=int,
+            default=1000,
+            help="The number of rows to generate - defaults to 1000",
+        )
+        parser.add_argument(
+            "-o", "--output", help="Output filename - defaults to gensql"
+        )
+        parser.add_argument(
+            "-q",
+            "--quiet",
+            action="store_true",
+            help="Suppress printing various informational messages",
+        )
         parser.add_argument(
             "-r",
             "--random",
             action="store_true",
             help="Enable randomness on the length of some items",
         )
-        parser.add_argument("-t", "--table", help="Table name to generate SQL for")
+        parser.add_argument(
+            "-t",
+            "--table",
+            help="Table name to generate SQL for - defaults to the filename",
+        )
         parser.add_argument("--validate", help="Validate an input JSON schema")
         return parser.parse_args()
 
@@ -137,8 +197,8 @@ class Help:
                 "user_id": {
                     "type": "bigint unsigned",
                     "nullable": "false",
-                    "auto increment": "true",
-                    "primary key": "true"
+                    "auto_increment": "true",
+                    "primary_key": "true"
                 },
                 "full_name": {
                     "type": "varchar",
@@ -153,14 +213,14 @@ class Help:
                 },
                 "last_modified": {
                     "type": "timestamp",
-                    "nullable": "true",
-                    "default": "null"
+                    "nullable": "false",
+                    "default": "now()"
                 }
             }
         """
-        return dedent(msg)
+        return msg
 
-    def schema(self):
+    def extended_help(self):
         msg = f"""
         GenSQL expects a JSON input schema, of the format:
 
@@ -191,7 +251,7 @@ class Help:
             * [var]char
                 * width
             * integers
-                * auto increment
+                * auto_increment
             * json, text
                 * max_length: float <0.01 - 1.00>
                   determines the maximum length of JSON arrays and TEXT columns
@@ -200,9 +260,22 @@ class Help:
             * all
                 * default
                 * invisible - NOTE: Only valid for MySQL
+                * is_id
+                    * provides hints to gensql on whether or not to create integers
+                      for a column if it cannot be automatically inferred
                 * nullable - NOTE: absence implies true
-                * primary key
+                * primary_key
                 * unique
+        Valid default values are:
+            * any constant
+            * array()
+                * creates a json array
+            * now()
+                * for a timestamp column, creates a default null value, and
+                  automatically updates with the current time if the row is updated
+            * static_now()
+                * for a timestamp column, creates a default value of the current time
+                  when the schema is loaded into a database
         e.g.
             {self.make_skeleton()}
         """
@@ -212,7 +285,33 @@ class Help:
 
 class Utilities:
     def __init__(self):
+        # self.conn = sqlite3.connect("db/gensql.db")
+        # self.cursor = self.conn.cursor()
         pass
+
+    @cache
+    def get_country(self, city: str) -> str:
+        # TODO: find a way to not open this every function call,
+        # while also not leaving dangling connections from __init__
+        conn = sqlite3.connect("db/gensql.db")
+        cursor = conn.cursor()
+        query = f"SELECT country FROM cities WHERE city = '{city}' LIMIT 1"
+        cursor.execute(query)
+        result = cursor.fetchone()[0]
+        conn.close()
+        return result
+
+    # TODO: currently unused due to severe slowdown in runner.py, keeping
+    # in case that is worked out to re-benchmark
+    @cache
+    def get_word(self, indices: dict) -> list:
+        conn = sqlite3.connect("db/gensql.db")
+        cursor = conn.cursor()
+        query = f"SELECT word FROM words WHERE id IN ({''', '''.join(indices)})"
+        cursor.execute(query)
+        result = [x[0] for x in cursor.fetchall()]
+        conn.close()
+        return result
 
     def lowercase_schema(self, schema: dict) -> dict:
         """
@@ -238,7 +337,10 @@ class Utilities:
         """
         if val is None:
             return False
-        val = val.lower()
+        try:
+            val = val.lower()
+        except AttributeError:
+            val = str(val).lower()
         if val in ("y", "yes", "t", "true", "on", "1"):
             return True
         elif val in ("n", "no", "f", "false", "off", "0"):
