@@ -52,21 +52,31 @@ for create in table_create:
 with open("../content/cities_countries.txt", "r") as f:
     lines = f.read().splitlines()
 for line in lines:
-    cursor.execute("INSERT INTO cities (city, country) VALUES (?, ?)", (line.split(",")[0].strip(), line.split(",")[1].strip()))
+    cursor.execute(
+        "INSERT INTO cities (city, country) VALUES (?, ?)",
+        (line.split(",")[0].strip(), line.split(",")[1].strip()),
+    )
     conn.commit()
 
 with open("../content/country_codes.txt", "r") as f:
     lines = f.read().splitlines()
 for line in lines:
-    cursor.execute("INSERT INTO countries (country, code) VALUES (?, ?)", (line.split(",")[0].strip(), line.split(",")[1].strip()))
+    cursor.execute(
+        "INSERT INTO countries (country, code) VALUES (?, ?)",
+        (line.split(",")[0].strip(), line.split(",")[1].strip()),
+    )
     conn.commit()
 
-with open("../content/first_names.txt", "r") as first_names, open("../content/last_names.txt", "r") as last_names:
+with open("../content/first_names.txt", "r") as first_names, open(
+    "../content/last_names.txt", "r"
+) as last_names:
     f_lines = first_names.read().splitlines()
     l_lines = last_names.read().splitlines()
     lines = list(zip(f_lines, l_lines))
 for line in lines:
-    cursor.execute("INSERT INTO names (first_names, last_names) VALUES (?, ?)", (line[0], line[1]))
+    cursor.execute(
+        "INSERT INTO names (first_names, last_names) VALUES (?, ?)", (line[0], line[1])
+    )
     conn.commit()
 
 with open("../content/wordlist.txt", "r") as f:
