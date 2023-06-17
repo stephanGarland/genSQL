@@ -22,16 +22,6 @@ ALLOWED_COLS = [
 
 ALLOWED_UNIQUES = ["email"]
 
-# CITIES_COUNTRIES = {
-#    x.split(",")[0]: x.split(",")[1]
-#    for x in open("content/cities_countries.txt").read().splitlines()
-# }
-
-# COUNTRY_CODES = {
-#    x.split(",")[1].lower(): x.split(",")[0]
-#    for x in open("content/country_codes.txt").read().splitlines()
-# }
-
 DEFAULT_INSERT_CHUNK_SIZE = 10000
 DEFAULT_MAX_FIELD_PCT = 0.15
 
@@ -57,14 +47,17 @@ MYSQL_INT_MIN_MAX = {
     "MYSQL_MAX_BIGINT_UNSIGNED": ~-(2**64),
 }
 
+MIN_PHONE_NUMBER = 11111
+MAX_PHONE_NUMBER = 99999
+
 PHONE_NUMBERS = {
     "au": lambda x: f"+61 02 {x[0:4]} {x[5:9]}",
     "de": lambda x: f"+49 030 {x[0:6]}-{x[6:8]}",
     "fr": lambda x: f"+33 01 {x[0:2]} {x[2:4]} {x[4:6]} {x[6:8]}",
+    "gb": lambda x: f"+44 0131 {x[0:4]} {x[4:8]}",
     "ke": lambda x: f"+254 20 {x[0:3]} {x[3:6]}",
     "jp": lambda x: f"+81 03 {x[0:4]}-{x[4:8]}",
     "mx": lambda x: f"+52 55 {x[0:4]} {x[4:8]}",
     "ua": lambda x: f"+380 32 {x[0:3]}-{x[3:5]}-{x[5:7]}",
-    "uk": lambda x: f"+44 0131 {x[0:4]} {x[4:8]}",
     "us": lambda x: f"+1 {x[0:3]}-{x[3:6]}-{x[6:10]}",
 }

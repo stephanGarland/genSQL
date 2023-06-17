@@ -64,7 +64,7 @@ GenSQL expects a JSON input schema, of the format:
 
 ## Notes
 
-* The `--filetype` flag only supports `csv` and `mysql`. The only supported RDBMS is MySQL (probably 8.x; it _might_ work with 5.7.8 if you want a JSON column, and earlier if you don't).
+* The `--filetype` flag only supports `csv`, `mysql`, and `postgres` - Postgres support is currently extremely limited (it does not yet create the table, but will create the table fill).
 * Generated datetimes are in UTC, i.e. no DST events exist. If you remove the query to set the session's timezone, you may have a bad time.
 * This uses a C library for a few functions, notably filling large arrays and shuffling them. For UUID creation, the library <uuid/uuid.h> is required to build the shared library.
 * Currently, generating UUIDs only supports v1 and v4, and if they're to be stored as `BINARY` types, only .sql file format is supported. Also as an aside, it's a terrible idea to use a UUID (at least v4) as a PK in InnoDB, so please be sure of what you're doing. If you don't believe me, generate one, and another using a monotonic integer or something similar, and compare on-disk sizes for the tablespaces.
@@ -76,8 +76,8 @@ GenSQL expects a JSON input schema, of the format:
 * The generated values for a JSON column can be an object of random words (the default), or an array of random integers. For the latter, set the hint `is_numeric_array` in the schema's object.
 * To have a column be given no `INSERT` statements, e.g. remain empty / with its default value, set the hint `is_empty: true` in the schema definition for the column.
 * To have the current datetime statically defined as the default value for a TIMESTAMP column, use the default value `static_now()`. To also have the column's default automatically update the timestamp, use the default value `now()`. To have the column's default value be NULL, but update automatically to the current timestamp when the row is updated, use `null_now()`.
-* Using a column of name `phone` will generate realistic - to the best of my knowledge - phone numbers for a given country (very limited set). It's currently non-optimized for performance, and thus incurs a ~40% slowdown over the baseline. A solution in C may or may not speed things up, as it's not that performing `random.shuffle()` on a 10-digit number is slow, it's that doing so `n` times is a lot of function calls. Inlining C functions in Python [does exist](https://github.com/ssize-t/inlinec), but the non-caching of its compilation would probably negate any savings.
-* Similarly, a column of name `email` will generate realistic email addresses (all with `.com` TLD), and will incur a ~40% slowdown over the baseline.
+* Using a column of name `phone` will generate realistic - to the best of my knowledge - phone numbers for a given country (very limited set). Performance should be nearly identical to other column types. Note that if a country is not selected via the `--country` flag, at this time there is no attempt to match up the phone syntax with a given country in the row, if it exists. Also, this has a roughly 80% slowdown over baseline due to the usage of `random.choice()`. This will be addressed in the future.
+* Similarly, a column of name `email` will generate realistic email addresses (all with `.com` TLD), but will incur a ~30-40% slowdown over the baseline.
 
 ### Loading data
 

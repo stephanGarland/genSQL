@@ -20,6 +20,8 @@ from utilities.constants import (
     JSON_DEFAULT_KEYS,
     JSON_OBJ_MAX_KEYS,
     JSON_OBJ_MAX_VALS,
+    MIN_PHONE_NUMBER,
+    MAX_PHONE_NUMBER,
     MYSQL_INT_MIN_MAX,
     PHONE_NUMBERS,
 )
@@ -32,6 +34,7 @@ class Runner:
         self.args = args
         self.city_country_swapped = False
         self.logger = logger.Logger().logger
+        self.phone_allocator = utilities.PhoneAllocator
         self.schema = schema
         self.tbl_cols = tbl_cols
         self.tbl_create = tbl_create
@@ -82,11 +85,16 @@ class Runner:
                 cursor.execute(city_query)
                 self.cities, self.countries = zip(*cursor.fetchall())
             elif self.args.country == "random" and "phone" in self.tbl_cols:
-                city_query = f"""SELECT c.city, c.country FROM cities c WHERE
-                    c.country IN ((SELECT cc.country FROM countries cc WHERE
-                    cc.code IN ({PHONE_NUMBERS.keys()}))"""
+                city_query = f"""SELECT c.city, c.country, cc.code FROM cities c JOIN
+                    countries cc ON c.country = cc.country WHERE cc.code IN
+                    ('{"', '".join(PHONE_NUMBERS.keys()).upper()}')"""
                 cursor.execute(city_query)
-                self.cities, self.countries = zip(*cursor.fetchall())
+                self.cities, self.countries, self.country_codes = zip(
+                    *cursor.fetchall()
+                )
+                # only need unique entries, not the actual length
+                # cast to list for faster random.choice() later
+                self.country_codes = [x.lower() for x in set(self.country_codes)]
             self.num_rows_cities = len(self.cities)
             conn.close()
 
@@ -172,6 +180,26 @@ class Runner:
                     self.random_uuid = self.uuid_allocator(self.args.num, True)
                 else:
                     self.random_uuid = self.uuid_allocator(self.args.num, False)
+            if "phone" in k:
+                # in order to not have to allocate an array with 10 billon ints in it
+                # to be able to generate 10-digit phone numbers,
+                # we instead allocate N arrays, each with (currently) 11111-99999 in them
+                # those are independently shuffled, and the deques are concatenated here
+                # two values are then popped to create the required phone number
+                deques_needed = ceil(
+                    self.args.num / (MAX_PHONE_NUMBER - MIN_PHONE_NUMBER) * 2
+                )
+                self.random_phone = self.allocator(
+                    MIN_PHONE_NUMBER, MAX_PHONE_NUMBER, ranged_arr=True, shuffle=True
+                )
+                if deques_needed > 1:
+                    for _ in range(deques_needed):
+                        self.random_phone.ids += self.allocator(
+                            MIN_PHONE_NUMBER,
+                            MAX_PHONE_NUMBER,
+                            ranged_arr=True,
+                            shuffle=True,
+                        ).ids
 
     # refactoring this to use allocate() with smaller lists for each type
     # was significantly slower than the current method - may revisit later
@@ -242,12 +270,11 @@ class Runner:
                     row[col] = f"UUID_TO_BIN('{random_uuid}')"
             elif opts.get("type") == "json":
                 max_rows_pct = float(opts.get("max_length", DEFAULT_MAX_FIELD_PCT))
+
+                # performing this with every iteration is 2% faster than moving it into a function and caching it
+                json_arr_len = ceil((JSON_OBJ_MAX_VALS - 1) * max_rows_pct)
                 if self.args.random:
-                    json_arr_len = ceil(
-                        random.random() * (JSON_OBJ_MAX_VALS - 1) * max_rows_pct
-                    )
-                else:
-                    json_arr_len = ceil((JSON_OBJ_MAX_VALS - 1) * max_rows_pct)
+                    json_arr_len = ceil(random.random() * json_arr_len)
                 if self.schema[col].get("is_numeric_array"):
                     rand_id_list = []
                     # make 5% of the JSON arrays filled with random integers
@@ -326,10 +353,14 @@ class Runner:
                 email_local = email_local.lower().replace("'", "''")
                 row[col] = f"'{email_local}@{email_domain}.com'"
             elif col == "phone":
-                phone_digits = [str(x) for x in range(10)]
-                random.shuffle(phone_digits)
-                phone_str = "".join(phone_digits)
-                row[col] = f"'{PHONE_NUMBERS[self.args.country](phone_str)}'"
+                phone_val_1 = self.random_phone.allocate()
+                phone_val_2 = self.random_phone.allocate()
+                phone_str = f"{phone_val_1}{phone_val_2}"
+                if self.args.country == "random":
+                    phone_country = random.choice(self.country_codes)
+                    row[col] = f"'{PHONE_NUMBERS[phone_country](phone_str)}'"
+                else:
+                    row[col] = f"'{PHONE_NUMBERS[self.args.country](phone_str)}'"
             elif self.schema[col]["type"] == "text":
                 max_rows_pct = float(opts.get("max_length", DEFAULT_MAX_FIELD_PCT))
                 # e.g. if max_rows_pct is 0.15, with 25 rows in lorem ipsum, we get a range of 1-4 rows
