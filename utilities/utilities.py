@@ -10,31 +10,6 @@ import sys
 from textwrap import dedent
 
 
-class UUIDAllocator:
-    def __init__(self, num: int, use_uuid_v4: bool = True):
-        try:
-            self.lib = ctypes.CDLL("./library/uuid.so")
-        except OSError as e:
-            raise SystemExit(
-                f"FATAL: couldn't load C library - run make\n\n{e}"
-            ) from None
-        self.lib.fill_array.argtypes = [ctypes.c_int, ctypes.c_bool]
-        self.lib.fill_array.restype = ctypes.POINTER(ctypes.c_char_p)
-        self.num = num
-        if use_uuid_v4:
-            self.uuid_ptr = self.lib.fill_array(self.num, True)
-        else:
-            self.uuid_ptr = self.lib.fill_array(self.num, False)
-        self.uuid_list = [self.uuid_ptr[i].decode() for i in range(self.num)]
-        self.uuids = deque(self.uuid_list)
-
-    def allocate(self) -> str | None:
-        try:
-            return self.uuids.popleft()
-        except IndexError:
-            return None
-
-
 class Allocator:
     def __init__(
         self, id_min: int, id_max: int, ranged_arr: bool = False, shuffle: bool = False
@@ -48,7 +23,7 @@ class Allocator:
             self.lib = ctypes.CDLL("./library/fast_shuffle.so")
         except OSError as e:
             raise SystemExit(
-                f"FATAL: couldn't load C library - run make\n\n{e}"
+                f"FATAL: couldn't load C library - run `run.sh` or `make`\n\n{e}"
             ) from None
         self.lib.fill_array.argtypes = [ctypes.c_uint32]
         self.lib.fill_array.restype = ctypes.POINTER(ctypes.c_uint32)
@@ -83,6 +58,66 @@ class Allocator:
         TODO, maybe: re-shuffle once a loop has completed.
         """
         self.ids.append(id)
+
+
+class PhoneAllocator:
+    def __init__(self, phone_min: int, phone_max: int):
+        # phone_max + 1 so the range is inclusive
+        self.allocator = Allocator(
+            phone_min, phone_max + 1, ranged_arr=True, shuffle=True
+        )
+        try:
+            self.lib = ctypes.CDLL("./library/fast_mod.so")
+        except OSError as e:
+            raise SystemExit(
+                f"FATAL: couldn't load C library - run `run.sh` or `make`\n\n{e}"
+            ) from None
+
+        self.lib.fastmod_u32.argtypes = [
+            ctypes.c_uint32,
+            ctypes.c_uint64,
+            ctypes.c_uint32,
+        ]
+        self.lib.precompute_M_u32.argtypes = [ctypes.c_uint32]
+        self.lib.is_divisible.argtypes = [ctypes.c_uint32, ctypes.c_uint64]
+        self.lib.fastmod_u32.restype = ctypes.c_uint32
+        self.lib.is_divisible.restype = ctypes.c_bool
+        self.lib.precompute_M_u32.restype = ctypes.c_uint64
+        self.M_value = self.lib.precompute_M_u32(11)
+
+    def allocate(self) -> int | None:
+        try:
+            candidate = self.allocator.ids.popleft()
+            while self.lib.is_divisible(candidate, self.M_value):
+                candidate = self.allocator.ids.popleft()
+            return candidate
+        except IndexError:
+            return None
+
+
+class UUIDAllocator:
+    def __init__(self, num: int, use_uuid_v4: bool = True):
+        try:
+            self.lib = ctypes.CDLL("./library/uuid.so")
+        except OSError as e:
+            raise SystemExit(
+                f"FATAL: couldn't load C library - run `run.sh` or `make`\n\n{e}"
+            ) from None
+        self.lib.fill_array.argtypes = [ctypes.c_int, ctypes.c_bool]
+        self.lib.fill_array.restype = ctypes.POINTER(ctypes.c_char_p)
+        self.num = num
+        if use_uuid_v4:
+            self.uuid_ptr = self.lib.fill_array(self.num, True)
+        else:
+            self.uuid_ptr = self.lib.fill_array(self.num, False)
+        self.uuid_list = [self.uuid_ptr[i].decode() for i in range(self.num)]
+        self.uuids = deque(self.uuid_list)
+
+    def allocate(self) -> str | None:
+        try:
+            return self.uuids.popleft()
+        except IndexError:
+            return None
 
 
 class Args:
