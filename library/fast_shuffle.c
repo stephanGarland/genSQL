@@ -20,8 +20,8 @@ uint32_t *fill_array_range(uint32_t start, uint32_t end) {
     if (!arr) {
         return NULL;
     }
-    for (uint32_t i = start; i <= end; i++) {
-        arr[i] = i;
+    for (uint32_t i = 0; i < size; i++) {
+        arr[i] = start++;
     }
     return arr;
 }
