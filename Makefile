@@ -20,8 +20,9 @@ make:
 		exit 1; \
 	fi
 	$(CC) $(CFLAGS) -shared library/fast_shuffle.c -o library/fast_shuffle.so
+	$(CC) $(CFLAGS) -shared library/fast_mod.c -o library/fast_mod.so
 	$(CC) $(CFLAGS) -shared library/uuid.c -L$(LDFLAGS) $(LDLIBS) -o library/uuid.so
 
 .PHONY: clean
 clean:
-	rm -f library/fast_shuffle.so library/uuid.so
+	rm -f library/fast_shuffle.so library/fast_mod.so library/uuid.so

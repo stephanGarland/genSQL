@@ -6,7 +6,7 @@ SYSTEM_TYPE=("${SYSTEM_TYPE[@],,}")
 symlink() {
     local lib
     lib=$1
-    cd library && ln -s "${SYSTEM_TYPE[0]}_${SYSTEM_TYPE[1]}_${lib}.so" "${lib}.so" && cd - || exit 1
+    cd library && ln -sf "${SYSTEM_TYPE[0]}_${SYSTEM_TYPE[1]}_${lib}.so" "${lib}.so" && cd - &>/dev/null || exit 1
 }
 
 case ${SYSTEM_TYPE[0]} in
@@ -14,6 +14,7 @@ case ${SYSTEM_TYPE[0]} in
     case ${SYSTEM_TYPE[1]} in
     "x86_64")
         symlink "uuid"
+        symlink "fast_mod"
         symlink "fast_shuffle"
         ;;
     *)
@@ -26,6 +27,7 @@ case ${SYSTEM_TYPE[0]} in
     case ${SYSTEM_TYPE[1]} in
     "x86_64" | "arm64")
         symlink "uuid"
+        symlink "fast_mod"
         symlink "fast_shuffle"
         ;;
     *)
