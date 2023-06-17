@@ -73,6 +73,13 @@ if __name__ == "__main__":
     schema_dict = v.parse_schema()
     schema_dict = utils.lowercase_schema(schema_dict)
     v.validate_schema(schema_dict)
+    if args.country == "random" and schema_dict.get("phone"):
+        use_random_phone = input(
+            "WARNING: Using `--country random` with phone number generation is slow! Continue (y/n)? "
+        )
+        if not use_random_phone in ["Y", "y"]:
+            print("INFO: Try again, with `--country xx` from the allowable list")
+            raise SystemExit(0)
     tbl_create, tbl_cols = g.mysql(schema_dict, tbl_name, args.drop_table)
     # generally, there isn't a good reason to insert values manually into an auto-incrementing col
     auto_inc_cols = [x for x in tbl_cols.keys() if tbl_cols[x].get("auto_inc")]
