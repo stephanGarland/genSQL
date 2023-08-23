@@ -1,3 +1,4 @@
+from collections import deque
 from copy import copy
 import json
 from math import ceil, floor
@@ -5,6 +6,9 @@ from os import urandom
 import random
 from pathlib import Path, PurePath
 import sqlite3
+
+from ulid import Monotonic
+from uuid6 import uuid7
 
 from exceptions.exceptions import (
     BinaryTypeInCSVError,
@@ -36,12 +40,15 @@ class Runner:
         self.tbl_cols = tbl_cols
         self.tbl_create = tbl_create
         self.tbl_name = tbl_name
+        self.ulid = Monotonic()
         self.utils = utilities.Utilities()
         self.unique_cols = unique_cols
+        self.uuid = uuid7
         self.uuid_allocator = utilities.UUIDAllocator
         self._has_float = False
         self._has_monotonic = False
         self._has_unique = False
+        self._skip_bools = False
 
         self._prepare_city_country()
         self._prepare_schema()
@@ -50,7 +57,7 @@ class Runner:
     def _prepare_city_country(self):
         conn = sqlite3.connect("db/gensql.db")
         cursor = conn.cursor()
-        if "country" in self.tbl_cols or "city" in self.tbl_cols:
+        if "country" in self.tbl_cols or "city" in self.tbl_cols or "phone" in self.tbl_cols:
             if "country" in self.tbl_cols and "city" in self.tbl_cols:
                 self.city_index = [
                     i for i, (k, v) in enumerate(self.schema.items()) if k == "city"
@@ -124,7 +131,7 @@ class Runner:
         numeric_cols = {
             k: v
             for k, v in self.schema.items()
-            if "int" in v["type"] or v["type"] in ["decimal", "double", "int"]
+            if "int" in v["type"] or v["type"] in ["bool", "decimal", "double", "int"]
         }
         for k, v in numeric_cols.items():
             if "unsigned" in v["type"]:
@@ -134,6 +141,12 @@ class Runner:
             elif v["type"] in ["decimal", "double"]:
                 col_max_val = float("inf")
                 self._has_float = True
+            elif v["type"] == "bool":
+                # don't allocate another array just for 0/1 if we can borrow one
+                if "id" in numeric_cols.keys():
+                    self._skip_bools = True
+                    continue
+                col_max_val = self.args.num
             else:
                 col_max_val = MYSQL_INT_MIN_MAX[
                     f"MYSQL_MAX_{v['type'].upper().split()[0]}_SIGNED"
@@ -168,7 +181,7 @@ class Runner:
             self.unique_id = self.allocator(0, self.args.num, shuffle=True)
         for k, v in self.schema.items():
             if "uuid" in k:
-                if v.get("uuid_v4", "true") in ("True", "true"):
+                if v.get("uuid_v4", "true").lower() == "true":
                     self.random_uuid = self.uuid_allocator(self.args.num, True)
                 else:
                     self.random_uuid = self.uuid_allocator(self.args.num, False)
@@ -235,11 +248,22 @@ class Runner:
                 row[col] = f"'{full_name}'"
 
             elif col == "uuid":
-                random_uuid = self.random_uuid.allocate()
+                random_uuid = self.uuid()
+                #random_uuid = self.random_uuid.allocate()
                 if "char" in opts["type"]:
                     row[col] = f"'{random_uuid}'"
                 elif "binary" in opts["type"]:
                     row[col] = f"UUID_TO_BIN('{random_uuid}')"
+
+            elif col == "ulid":
+                random_ulid = self.ulid.generate()
+                row[col] = f"'{random_ulid}'"
+
+            elif opts.get("type") == "bool":
+                rand_id_for_bool = self.random_id.allocate()
+                row[col] = f"{rand_id_for_bool & 1}"
+                self.random_id.release(rand_id_for_bool)
+
             elif opts.get("type") == "json":
                 max_rows_pct = float(opts.get("max_length", DEFAULT_MAX_FIELD_PCT))
                 if self.args.random:
@@ -249,18 +273,21 @@ class Runner:
                 else:
                     json_arr_len = ceil((JSON_OBJ_MAX_VALS - 1) * max_rows_pct)
                 if self.schema[col].get("is_numeric_array"):
+                    json_arr_len = ceil(random.random() * json_arr_len)
+                if self.schema[col].get("is_numeric_array") or self.schema[col].get("is_hybrid_array"):
                     rand_id_list = []
                     # make 5% of the JSON arrays filled with random integers
-                    if not idx % 20:
+                    if not idx % 2:
                         for i in range(json_arr_len):
                             rand_id = self.random_id.allocate()
                             rand_id_list.append(str(rand_id))
                             self.random_id.release(rand_id)
                         rand_ids = ",".join(rand_id_list)
-                        row[col] = f"'[{rand_ids}]'"
-                    else:
-                        row[col] = "'[]'"
-                else:
+                        if self.schema[col].get("is_numeric_array"):
+                            row[col] = f"'[{rand_ids}]'"
+                    #else:
+                    #    row[col] = "'[]'"
+                if True:
                     json_dict = {}
                     # may or may not want to use this again
                     # json_keys = self.sample(
@@ -283,12 +310,18 @@ class Runner:
                             json_dict[key][json_keys.pop()] = [
                                 json_vals.pop() for _ in range(json_arr_len)
                             ]
+                        else:
+                            key = json_keys.pop()
+                            json_dict[key] = {}
+                            json_dict[key] = [json_vals.pop() for _ in range(json_arr_len // 8)]
                     else:
                         key = json_keys.pop()
                         json_dict[key] = {}
                         json_dict[key][json_keys.pop()] = [
                             json_vals.pop() for _ in range(json_arr_len)
                         ]
+                    if rand_id_list:
+                        json_dict[json_keys.pop()] = rand_ids
                     row[col] = f"'{json.dumps(json_dict)}'"
 
             elif col == "city":
@@ -421,6 +454,7 @@ class Runner:
         return insert_rows
 
     def run(self) -> str:
+        # a list seems to barely edge out a deque for speed (0.25%)
         sql_inserts = []
         random.seed(urandom(4))
         _has_timestamp = any("timestamp" in s.values() for s in self.schema.values())
@@ -477,7 +511,8 @@ class Runner:
         if self.city_country_swapped:
             for insert in sql_inserts:
                 insert["city"], insert["country"] = insert["country"], insert["city"]
-        vals = [",".join(str(v) for v in d.values()) for d in sql_inserts]
+        # map() is 3% faster for this purpose than a nested list comprehension
+        vals = [",".join(map(str, d.values())) for d in sql_inserts]
         match self.args.filetype:
             case "mysql":
                 lines = self.make_sql_rows(vals, "mysql")
@@ -490,7 +525,7 @@ class Runner:
                 raise ValueError(f"{self.args.filetype} is not a valid output format")
         try:
             with open(
-                f"schema_outputs/{filename}", f"{'w' if self.args.force else 'x'}"
+                f"schema_outputs/{filename}", f"{'w' if self.args.force else 'x'}",
             ) as f:
                 if "sql" in self.args.filetype:
                     f.writelines(self.tbl_create)

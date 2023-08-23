@@ -4,6 +4,7 @@ ALLOWED_COLS = [
     "bigint unsigned",
     "bigint",
     "binary",
+    "bool",
     "char",
     "decimal",
     "double",
@@ -36,8 +37,8 @@ DEFAULT_INSERT_CHUNK_SIZE = 10000
 DEFAULT_MAX_FIELD_PCT = 0.15
 
 JSON_DEFAULT_KEYS = [f"{x}_key" for x in ascii_lowercase][::-1]
-JSON_OBJ_MAX_KEYS = 3
-JSON_OBJ_MAX_VALS = 25
+JSON_OBJ_MAX_KEYS = 10
+JSON_OBJ_MAX_VALS = 100
 
 MYSQL_INT_MIN_MAX = {
     "MYSQL_MIN_TINYINT_SIGNED": -(2**7),
