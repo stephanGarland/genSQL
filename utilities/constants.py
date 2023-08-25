@@ -17,6 +17,8 @@ ALLOWED_COLS = [
     "smallint",
     "text",
     "timestamp",
+    "ulid",
+    "uuid",
     "varbinary",
     "varchar",
 ]

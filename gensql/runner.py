@@ -57,43 +57,44 @@ class Runner:
     def _prepare_city_country(self):
         conn = sqlite3.connect("db/gensql.db")
         cursor = conn.cursor()
-        if "country" in self.tbl_cols or "city" in self.tbl_cols or "phone" in self.tbl_cols:
-            if "country" in self.tbl_cols and "city" in self.tbl_cols:
-                self.city_index = [
-                    i for i, (k, v) in enumerate(self.schema.items()) if k == "city"
-                ][0]
-                self.country_index = [
-                    i for i, (k, v) in enumerate(self.schema.items()) if k == "country"
-                ][0]
-                # city must be evaluated first for proper country selection
-                # but we can swap them back at the end to match the desired schema
-                if self.city_index > self.country_index:
-                    self.logger.debug(
-                        "Performing in-memory city/country swap for performance"
-                    )
-                    self.city_country_swapped = True
-                    temp_schema = list(self.schema.items())
-                    temp_schema[self.city_index], temp_schema[self.country_index] = (
-                        temp_schema[self.country_index],
-                        temp_schema[self.city_index],
-                    )
-                    self.schema = dict(temp_schema)
-            if self.args.country and not self.args.country == "random":
-                city_query = f"""SELECT c.city, c.country FROM cities c WHERE
-                    c.country = (SELECT cc.country FROM countries cc WHERE
-                    cc.code = '{self.args.country.upper()}')"""
-                cursor.execute(city_query)
-                self.cities, self.countries = zip(*cursor.fetchall())
-            elif self.args.country == "random" and not "phone" in self.tbl_cols:
-                city_query = "SELECT c.city, c.country FROM cities c"
-                cursor.execute(city_query)
-                self.cities, self.countries = zip(*cursor.fetchall())
-            elif self.args.country == "random" and "phone" in self.tbl_cols:
-                city_query = f"""SELECT c.city, c.country FROM cities c WHERE
-                    c.country IN ((SELECT cc.country FROM countries cc WHERE
-                    cc.code IN ({PHONE_NUMBERS.keys()}))"""
-                cursor.execute(city_query)
-                self.cities, self.countries = zip(*cursor.fetchall())
+        #if "country" in self.tbl_cols or "city" in self.tbl_cols or "phone" in self.tbl_cols:
+        if "country" in self.tbl_cols and "city" in self.tbl_cols:
+            self.city_index = [
+                i for i, (k, v) in enumerate(self.schema.items()) if k == "city"
+            ][0]
+            self.country_index = [
+                i for i, (k, v) in enumerate(self.schema.items()) if k == "country"
+            ][0]
+            # city must be evaluated first for proper country selection
+            # but we can swap them back at the end to match the desired schema
+            if self.city_index > self.country_index:
+                self.logger.debug(
+                    "Performing in-memory city/country swap for performance"
+                )
+                self.city_country_swapped = True
+                temp_schema = list(self.schema.items())
+                temp_schema[self.city_index], temp_schema[self.country_index] = (
+                    temp_schema[self.country_index],
+                    temp_schema[self.city_index],
+                )
+                self.schema = dict(temp_schema)
+        if self.args.country and not self.args.country == "random":
+            city_query = f"""SELECT c.city, c.country FROM cities c WHERE
+                c.country = (SELECT cc.country FROM countries cc WHERE
+                cc.code = '{self.args.country.upper()}')"""
+            cursor.execute(city_query)
+            self.cities, self.countries = zip(*cursor.fetchall())
+        elif self.args.country == "random" and not "phone" in self.tbl_cols:
+            city_query = "SELECT c.city, c.country FROM cities c"
+            cursor.execute(city_query)
+            self.cities, self.countries = zip(*cursor.fetchall())
+        #elif self.args.country == "random" and "phone" in self.tbl_cols:
+        else:
+            city_query = f"""SELECT c.city, c.country FROM cities c WHERE
+                c.country IN ((SELECT cc.country FROM countries cc WHERE
+                cc.code IN ({PHONE_NUMBERS.keys()}))"""
+            cursor.execute(city_query)
+            self.cities, self.countries = zip(*cursor.fetchall())
             self.num_rows_cities = len(self.cities)
             conn.close()
 
@@ -250,7 +251,7 @@ class Runner:
             elif col == "uuid":
                 random_uuid = self.uuid()
                 #random_uuid = self.random_uuid.allocate()
-                if "char" in opts["type"]:
+                if "char" in opts["type"] or opts["type"] == "uuid":
                     row[col] = f"'{random_uuid}'"
                 elif "binary" in opts["type"]:
                     row[col] = f"UUID_TO_BIN('{random_uuid}')"
@@ -359,6 +360,11 @@ class Runner:
                 email_local = email_local.lower().replace("'", "''")
                 row[col] = f"'{email_local}@{email_domain}.com'"
             elif col == "phone":
+                phone_digits = [str(x) for x in range(10)]
+                random.shuffle(phone_digits)
+                phone_str = "".join(phone_digits)
+                row[col] = f"'{PHONE_NUMBERS[self.args.country](phone_str)}'"
+            elif "varchar" in opts.get("type"):
                 phone_digits = [str(x) for x in range(10)]
                 random.shuffle(phone_digits)
                 phone_str = "".join(phone_digits)
