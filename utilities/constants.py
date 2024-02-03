@@ -61,3 +61,5 @@ PHONE_NUMBERS = {
     "ua": lambda x: f"+380 32 {x[0:3]}-{x[3:5]}-{x[5:7]}",
     "us": lambda x: f"+1 {x[0:3]}-{x[3:6]}-{x[6:10]}",
 }
+
+THREADING_BUFFER_SIZE = 10_000

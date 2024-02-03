@@ -66,6 +66,13 @@ class ThreadedFileWriter:
         }
         return_dict[col_order] = fn_map[data_type](*args)
 
+    def resolve_arg(self, arg_str, context):
+        if isinstance(arg_str, str) and arg_str.startswith("self."):
+            resolved_arg = (getattr(context, arg_str[5:]))
+        else:
+            resolved_arg = arg_str
+        return resolved_arg
+
     def make_with_threads(self, data_dict: dict):
         threads = []
         return_dict = {}
@@ -73,6 +80,7 @@ class ThreadedFileWriter:
         col_order = self.generate_col_order(data_dict)
         topo_graph.discard(None)
         for col in topo_graph:
+            resolved_arg = self.resolve_arg(data_dict[col].get("args", ""), self)
             t = Thread(
                 target=self.generate_data,
                 args=(
@@ -80,8 +88,7 @@ class ThreadedFileWriter:
                     col,
                     self.num_rows,
                     return_dict,
-                    self.country
-                    #data_dict[col].get("depends_on"),
+                    resolved_arg
                 ),
             )
             t.start()
@@ -98,9 +105,9 @@ class ThreadedFileWriter:
 
     def row_builder(self):
         data_dict = {
-            "phone": {"depends_on": "country"},
-            "country": {None: None},
-            "city": {"depends_on": "country"},
+            "phone": {"args": "self.country", "depends_on": "country"},
+            "country": {"depends_on": "city"},
+            "city": {},
         }
         self.csv_header_writer(data_dict.keys())
         writer = Thread(target=self.writer_thread)

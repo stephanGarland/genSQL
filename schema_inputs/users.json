@@ -21,7 +21,13 @@
    },
    "city": {
       "type": "varchar",
-      "width": "255"
+      "width": "255",
+      "depends_on": "country"
+   },
+   "phone": {
+      "type": "varchar",
+      "width": "255",
+      "depends_on": "country"
    },
    "country": {
       "type": "varchar",

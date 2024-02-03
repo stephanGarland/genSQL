@@ -9,7 +9,7 @@ import sqlite3
 import sys
 from textwrap import dedent
 
-
+# TODO: Implement a textual allocator by multiplying the wordlist by N, then creating a monotonic allocator below matching its length, and shuffling it as needed
 class Allocator:
     def __init__(
         self, id_min: int, id_max: int, ranged_arr: bool = False, shuffle: bool = False
