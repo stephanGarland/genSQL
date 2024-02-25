@@ -1,13 +1,15 @@
 import argparse
-from collections import deque
 import ctypes
-from functools import cache
 import json
-from os import urandom
 import random
 import sqlite3
 import sys
+from collections import deque
+from functools import cache
+from math import floor
+from os import urandom
 from textwrap import dedent
+
 
 # TODO: Implement a textual allocator by multiplying the wordlist by N, then creating a monotonic allocator below matching its length, and shuffling it as needed
 class Allocator:
@@ -323,6 +325,17 @@ class Utilities:
         # self.conn = sqlite3.connect("db/gensql.db")
         # self.cursor = self.conn.cursor()
         pass
+
+    def sample(
+        self, iterable: list, num_rows: int, num_samples: int = 1
+    ) -> list[str] | str:
+        sample_list = []
+        for i in range(num_samples):
+            idx = floor(random.random() * num_rows)
+            if num_samples == 1:
+                return iterable[idx]
+            sample_list.append(iterable[idx])
+        return sample_list
 
     @cache
     def get_country(self, city: str) -> str:
