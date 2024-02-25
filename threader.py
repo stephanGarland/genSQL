@@ -3,7 +3,8 @@ from graphlib import TopologicalSorter
 from queue import Queue
 from threading import Thread
 
-from gensql.test_gen import Geo
+from library.generators.geo import Geo
+from library.generators.name import FirstName, LastName
 
 CHUNK_SIZE = 10_000
 NUM_ROWS = 1_000_000
@@ -16,7 +17,9 @@ class ThreadedFileWriter:
         self.chunk = []
         self.country = country
         self.file_name = file_name
-        self.geo = Geo(CHUNK_SIZE, country, num_rows)
+        self.first_name = FirstName(NUM_ROWS)
+        self.last_name = LastName(NUM_ROWS)
+        self.geo = Geo(country, NUM_ROWS)
         self.num_rows = num_rows
         self.queue = Queue()
 
@@ -62,13 +65,15 @@ class ThreadedFileWriter:
         fn_map = {
             "city": self.geo.make_city,
             "country": self.geo.make_country,
+            "first_name": self.first_name.make_name,
+            "last_name": self.last_name.make_name,
             "phone": self.geo.make_phone,
         }
         return_dict[col_order] = fn_map[data_type](*args)
 
     def resolve_arg(self, arg_str, context):
         if isinstance(arg_str, str) and arg_str.startswith("self."):
-            resolved_arg = (getattr(context, arg_str[5:]))
+            resolved_arg = getattr(context, arg_str[5:])
         else:
             resolved_arg = arg_str
         return resolved_arg
@@ -83,13 +88,7 @@ class ThreadedFileWriter:
             resolved_arg = self.resolve_arg(data_dict[col].get("args", ""), self)
             t = Thread(
                 target=self.generate_data,
-                args=(
-                    col_order[col],
-                    col,
-                    self.num_rows,
-                    return_dict,
-                    resolved_arg
-                ),
+                args=(col_order[col], col, self.num_rows, return_dict, resolved_arg),
             )
             t.start()
             threads.append(t)
@@ -104,7 +103,10 @@ class ThreadedFileWriter:
         return rows
 
     def row_builder(self):
+        # "email": {"depends_on": "first_name"},
         data_dict = {
+            "first_name": {},
+            "last_name": {},
             "phone": {"args": "self.country", "depends_on": "country"},
             "country": {"depends_on": "city"},
             "city": {},
@@ -125,5 +127,5 @@ class ThreadedFileWriter:
 
 
 if __name__ == "__main__":
-    t = ThreadedFileWriter("us", "test.csv", NUM_ROWS)
+    t = ThreadedFileWriter("Japan", "test.csv", NUM_ROWS)
     t.row_builder()
