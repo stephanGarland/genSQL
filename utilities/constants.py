@@ -62,4 +62,6 @@ PHONE_NUMBERS = {
     "us": lambda x: f"+1 {x[0:3]}-{x[3:6]}-{x[6:10]}",
 }
 
+SQLITE_DB = "./db/gensql.db"
+
 THREADING_BUFFER_SIZE = 10_000
