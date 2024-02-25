@@ -3,15 +3,13 @@ from math import ceil
 
 import sqlite3
 
-from library.db.sqlite.connection import SQLite
+from .base import BaseGenerator
 from utilities import utilities
 
 # TODO: should FirstName and LastName be merged?
-class FirstName(SQLite):
+class FirstName(BaseGenerator):
     def __init__(self, num_rows: int):
-        super().__init__()
-        self.chunk_size = num_rows // 10
-        self.num_rows = num_rows
+        super().__init__(num_rows)
         self.sample = utilities.Utilities.sample
         q1 = f"""SELECT first_name FROM person_name"""
         self.cursor.execute(q1)
@@ -31,13 +29,10 @@ class FirstName(SQLite):
             yield first_names
 
 
-class LastName(SQLite):
+class LastName(BaseGenerator):
     def __init__(self, num_rows: int):
-        super().__init__()
-        self.chunk_size = num_rows // 10
-        self.num_rows = num_rows
+        super().__init__(num_rows)
         self.sample = utilities.Utilities.sample
-        sqlite = SQLite()
         q1 = f"""SELECT last_name FROM person_name"""
         self.cursor.execute(q1)
         self.last_names = [x[0] for x in self.cursor.fetchall()]

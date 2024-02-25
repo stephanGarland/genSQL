@@ -1,8 +1,7 @@
 from collections import deque
 from math import ceil
 
-import sqlite3
-
+from .base import BaseGenerator
 from utilities.constants import (
     MIN_PHONE_NUMBER,
     MAX_PHONE_NUMBER,
@@ -10,26 +9,24 @@ from utilities.constants import (
 )
 from utilities import utilities
 
-class Geo:
+class Geo(BaseGenerator):
     def __init__(self, country_code: str, num_rows: int):
+        super().__init__(num_rows)
         self.allocator = utilities.Allocator
-        self.chunk_size = num_rows // 10
         self.country_code = country_code
-        self.num_rows = num_rows
-        conn = sqlite3.connect("./db/gensql_new.db")
-        cursor = conn.cursor()
         q1 = f"""SELECT c.city, c.country FROM city c WHERE c.country = '{self.country_code}'"""
-        cursor.execute(q1)
-        cc = cursor.fetchall()
+        self.cursor.execute(q1)
+        cc = self.cursor.fetchall()
         self.city, self.country = zip(*cc)
         # only return countries with a matching city
         q2 = """SELECT DISTINCT cc.code, c.country FROM country cc JOIN city c ON c.country = cc.country"""
-        cursor.execute(q2)
-        result = cursor.fetchall()
+        self.cursor.execute(q2)
+        result = self.cursor.fetchall()
         self.cc_map = {v:k.lower() for k,v in result}
         self._prepare_city()
         self._prepare_country()
         self._prepare_phone_allocator()
+        self.conn.close()
 
     def _prepare_city(self):
         num_needed = ceil(self.num_rows / len(self.city))
