@@ -4,6 +4,7 @@ from queue import Queue
 from threading import Thread
 
 from library.generators.geo import Geo
+from library.generators.email import Email
 from library.generators.name import FirstName, LastName
 
 CHUNK_SIZE = 10_000
@@ -12,6 +13,7 @@ THREADING_BUFFER_SIZE = 10_000
 
 
 class ThreadedFileWriter:
+    # TODO: break this class up
     def __init__(self, country: str, file_name: str, num_rows: int):
         self.buffer_size = THREADING_BUFFER_SIZE
         self.chunk = []
@@ -19,9 +21,10 @@ class ThreadedFileWriter:
         self.file_name = file_name
         self.first_name = FirstName(NUM_ROWS)
         self.last_name = LastName(NUM_ROWS)
+        self.email = Email(NUM_ROWS)
         self.geo = Geo(country, NUM_ROWS)
         self.num_rows = num_rows
-        self.queue = Queue()
+        self.writer_queue = Queue()
 
     def csv_header_writer(self, col_names: list):
         with open(self.file_name, "w") as f:
@@ -30,7 +33,7 @@ class ThreadedFileWriter:
     def writer_thread(self):
         with open(self.file_name, "a") as f:
             while True:
-                chunks = self.queue.get()
+                chunks = self.writer_queue.get()
                 if chunks == "EOF":
                     break
                 for chunk in chunks:
@@ -48,10 +51,12 @@ class ThreadedFileWriter:
     def generate_topo_graph(self, cols: dict[str, dict[str, str]]) -> set:
         graph = defaultdict(set)
         for k, v in cols.items():
-            graph[k].add(v.get("depends_on"))
+            graph[k]
+            for depend in v.get("depends_on", []):
+                if depend is not None:
+                    graph[depend].add(k)
 
         ts = TopologicalSorter(graph)
-
         return set(ts.static_order())
 
     def generate_col_order(self, cols: dict[str, dict[str, str]]) -> dict:
@@ -65,6 +70,7 @@ class ThreadedFileWriter:
         fn_map = {
             "city": self.geo.make_city,
             "country": self.geo.make_country,
+            "email": self.email.make_email,
             "first_name": self.first_name.make_name,
             "last_name": self.last_name.make_name,
             "phone": self.geo.make_phone,
@@ -74,6 +80,8 @@ class ThreadedFileWriter:
     def resolve_arg(self, arg_str, context):
         if isinstance(arg_str, str) and arg_str.startswith("self."):
             resolved_arg = getattr(context, arg_str[5:])
+        elif isinstance(arg_str, list) and arg_str[0].startswith("self."):
+            resolved_arg = [getattr(context, x[5:]) for x in arg_str]
         else:
             resolved_arg = arg_str
         return resolved_arg
@@ -83,7 +91,6 @@ class ThreadedFileWriter:
         return_dict = {}
         topo_graph = self.generate_topo_graph(data_dict)
         col_order = self.generate_col_order(data_dict)
-        topo_graph.discard(None)
         for col in topo_graph:
             resolved_arg = self.resolve_arg(data_dict[col].get("args", ""), self)
             t = Thread(
@@ -103,12 +110,12 @@ class ThreadedFileWriter:
         return rows
 
     def row_builder(self):
-        # "email": {"depends_on": "first_name"},
         data_dict = {
             "first_name": {},
             "last_name": {},
-            "phone": {"args": "self.country", "depends_on": "country"},
-            "country": {"depends_on": "city"},
+            "email": {"args": ["self.first_name", "self.last_name"], "depends_on": ["first_name", "last_name"]},
+            "phone": {"args": "self.country", "depends_on": ["country"]},
+            "country": {"depends_on": ["city"]},
             "city": {},
         }
         self.csv_header_writer(data_dict.keys())
@@ -118,14 +125,14 @@ class ThreadedFileWriter:
         for row in rows:
             self.chunk.append(row)
             if len(self.chunk) >= self.buffer_size:
-                self.queue.put(self.chunk)
+                self.writer_queue.put(self.chunk)
                 self.chunk = []
         if self.chunk:
-            self.queue.put(self.chunk)
-        self.queue.put("EOF")
+            self.writer_queue.put(self.chunk)
+        self.writer_queue.put("EOF")
         writer.join()
 
 
 if __name__ == "__main__":
-    t = ThreadedFileWriter("Japan", "test.csv", NUM_ROWS)
+    t = ThreadedFileWriter("United States", "test.csv", NUM_ROWS)
     t.row_builder()

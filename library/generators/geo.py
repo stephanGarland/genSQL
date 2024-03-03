@@ -7,14 +7,15 @@ from utilities.constants import (
     MAX_PHONE_NUMBER,
     PHONE_NUMBERS,
 )
+from random import shuffle
 from utilities import utilities
 
 class Geo(BaseGenerator):
-    def __init__(self, country_code: str, num_rows: int):
+    def __init__(self, country: str, num_rows: int):
         super().__init__(num_rows)
         self.allocator = utilities.Allocator
-        self.country_code = country_code
-        q1 = f"""SELECT c.city, c.country FROM city c WHERE c.country = '{self.country_code}'"""
+        self.country = country
+        q1 = f"""SELECT c.city, c.country FROM city c WHERE c.country = '{self.country}'"""
         self.cursor.execute(q1)
         cc = self.cursor.fetchall()
         self.city, self.country = zip(*cc)
