@@ -1,5 +1,8 @@
+import ctypes
+import sqlite3
 from collections import defaultdict
 from graphlib import TopologicalSorter
+from multiprocessing import resource_tracker, shared_memory
 from queue import Queue
 from threading import Thread
 
@@ -7,9 +10,59 @@ from library.generators.email import Email
 from library.generators.geo import Geo
 from library.generators.name import FirstName, LastName
 
-CHUNK_SIZE = 10_000
-NUM_ROWS = 1_000_000
+DB_PATH = "db/gensql.db"
+NUM_ROWS = 10_000_000
+SH_MEM_NAME_FNAME = "SHM_FNAME"
+SH_MEM_NAME_LNAME = "SHM_LNAME"
+SH_MEM_SZ = 1 << 20
+SIZEOF_CHAR = 4
+NUM_CHARS = SH_MEM_SZ // SIZEOF_CHAR
 THREADING_BUFFER_SIZE = 10_000
+
+
+class SQLiteColumns:
+    def __init__(self, db_path: str):
+        conn = sqlite3.connect(db_path)
+        self.cursor = conn.cursor()
+
+    def get_first_names(self):
+        q_fname = "SELECT MAX(LENGTH(first_name)) FROM person_name UNION SELECT first_name FROM person_name"
+        self.cursor.execute(q_fname)
+        res = self.cursor.fetchall()
+        max_fname, fnames = res[0], res[1:]
+        return max_fname, fnames
+
+    def get_last_names(self):
+        q_lname = "SELECT MAX(LENGTH(last_name)) FROM person_name UNION SELECT last_name FROM person_name"
+        self.cursor.execute(q_lname)
+        res = self.cursor.fetchall()
+        max_lname, lnames = res[0], res[1:]
+        return max_lname, lnames
+
+
+class CreateSharedMem:
+    def __init__(self):
+        sqlite_cols = SQLiteColumns(DB_PATH)
+        self.max_fname, self.first_names = sqlite_cols.get_first_names()
+        self.max_lname, self.last_names = sqlite_cols.get_last_names()
+
+        self.shm_first_names = shared_memory.SharedMemory(
+            name=SH_MEM_NAME_FNAME, create=True, size=SH_MEM_SZ
+        )
+        self.shm_last_names = shared_memory.SharedMemory(
+            name=SH_MEM_NAME_LNAME, create=True, size=SH_MEM_SZ
+        )
+
+        self.lib = ctypes.CDLL("char_shuffle.so")
+        self.lib.shuffle_fname.argtypes = [ctypes.c_int32, ctypes.c_int32]
+        self.lib.shuffle_lname.argtypes = [ctypes.c_int32, ctypes.c_int32]
+
+    def fill_shmem(self, shm, content, max_len):
+        offset = 0
+        for x in content:
+            encoded = x[0].encode("utf-8").ljust(max_len, b"\x00")
+            shm.buf[offset : offset + max_len] = encoded
+            offset += max_len
 
 
 class ThreadedFileWriter:
@@ -64,13 +117,14 @@ class ColumnOrderGenerator:
 
 
 class RowGenerator:
-    def __init__(self, country: str, file_name: str, num_rows: int):
+    def __init__(self, country: str, file_name: str, num_rows: int, shm):
         self.col_order_gen = ColumnOrderGenerator
+        self.shm = shm
         self.chunk: list = []
         self.country = country
         self.file_name = file_name
-        self.first_name = FirstName(NUM_ROWS)
-        self.last_name = LastName(NUM_ROWS)
+        self.first_name = FirstName(NUM_ROWS, self.shm.lib.shuffle_fname)
+        self.last_name = LastName(NUM_ROWS, self.shm.lib.shuffle_lname)
         self.email = Email(NUM_ROWS)
         self.geo = Geo(country, NUM_ROWS)
         self.num_rows = num_rows
@@ -93,6 +147,8 @@ class RowGenerator:
         # so these checks don't need to happen at all
         if isinstance(arg_str, str) and arg_str.startswith("self."):
             resolved_arg = getattr(context, arg_str[5:])
+        elif isinstance(arg_str, str) and arg_str.startswith("shm."):
+            resolved_arg = getattr(shm, arg_str[4:])
         elif isinstance(arg_str, list) and arg_str[0].startswith("self."):
             resolved_arg = [getattr(context, x[5:]) for x in arg_str]
         else:
@@ -125,8 +181,8 @@ class RowGenerator:
 
     def row_builder(self):
         data_dict = {
-            "first_name": {},
-            "last_name": {},
+            "first_name": {"args": "shm.shm_first_names"},
+            "last_name": {"args": "shm.shm_last_names"},
             "email": {
                 "args": ["self.first_name", "self.last_name"],
                 "depends_on": ["first_name", "last_name"],
@@ -151,7 +207,21 @@ class RowGenerator:
 
 
 if __name__ == "__main__":
+    shm = CreateSharedMem()
+    # TODO: dynamically calculate this
+    max_len = 16
+    # shm.max_fname[0] == 15
+    shm.fill_shmem(shm.shm_first_names, shm.first_names, max_len)
+    shm.fill_shmem(shm.shm_last_names, shm.last_names, max_len)
+
+    shm.lib.shuffle_fname(len(shm.first_names), max_len)
+    shm.lib.shuffle_lname(len(shm.last_names), max_len)
+
     row_gen = RowGenerator(
-        country="United States", file_name="test.csv", num_rows=NUM_ROWS
+        country="United States", file_name="test.csv", num_rows=NUM_ROWS, shm=shm
     )
     row_gen.row_builder()
+    shm.shm_first_names.close()
+    shm.shm_last_names.close()
+    shm.shm_first_names.unlink()
+    shm.shm_last_names.unlink()
