@@ -58,7 +58,7 @@ class CreateSharedMem:
             name=const.SH_MEM_NAME_WORDS, create=True, size=const.SH_MEM_SZ
         )
 
-        self.lib = ctypes.CDLL("char_shuffle.so")
+        self.lib = ctypes.CDLL("library/char_shuffle.so")
 
         self.lib.get_shared_mem_ptr.argtypes = [ctypes.c_char_p]
         self.lib.get_shared_mem_ptr.restype = ctypes.c_void_p

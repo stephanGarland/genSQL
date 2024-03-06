@@ -1,5 +1,5 @@
 CC := gcc
-CFLAGS := -Wextra -Wall -O3
+CFLAGS := -Wextra -Wall -O3 -fPIC -shared
 LDLIBS := -luuid
 LDFLAGS := /usr/lib/x86_64-linux-gnu
 
@@ -19,10 +19,11 @@ make:
 		echo "On openSUSE, use: sudo zypper in libuuid-devel"; \
 		exit 1; \
 	fi
-	$(CC) $(CFLAGS) -shared library/fast_shuffle.c -o library/fast_shuffle.so
-	$(CC) $(CFLAGS) -shared library/fast_mod.c -o library/fast_mod.so
-	$(CC) $(CFLAGS) -shared library/uuid.c -L$(LDFLAGS) $(LDLIBS) -o library/uuid.so
+	$(CC) $(CFLAGS) library/char_shuffle.c -o library/char_shuffle.so
+	$(CC) $(CFLAGS) library/fast_shuffle.c -o library/fast_shuffle.so
+	$(CC) $(CFLAGS) library/fast_mod.c -o library/fast_mod.so
+	$(CC) $(CFLAGS) library/uuid.c -L$(LDFLAGS) $(LDLIBS) -o library/uuid.so
 
 .PHONY: clean
 clean:
-	rm -f library/fast_shuffle.so library/fast_mod.so library/uuid.so
+	rm -f library/fast_shuffle.so library/fast_mod.so library/uuid.so library/char_shuffle.so
