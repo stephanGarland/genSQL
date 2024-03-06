@@ -49,6 +49,8 @@ MYSQL_INT_MIN_MAX = {
 
 MIN_PHONE_NUMBER = 11111
 MAX_PHONE_NUMBER = 99999
+MIN_SSN = 11111
+MAX_SSN = 99999
 
 PHONE_NUMBERS = {
     "au": lambda x: f"+61 02 {x[0:4]} {x[5:9]}",
@@ -62,6 +64,14 @@ PHONE_NUMBERS = {
     "us": lambda x: f"+1 {x[0:3]}-{x[3:6]}-{x[6:10]}",
 }
 
+SSNS = lambda x: f"{x[0:3]-x[4:6]-x[7:11]}"
+
 SQLITE_DB = "./db/gensql.db"
+
+SH_MEM_NAME_FNAME = "SHM_FNAME"
+SH_MEM_NAME_LNAME = "SHM_LNAME"
+SH_MEM_NAME_WORDS = "SHM_WORDS"
+
+SH_MEM_SZ = 1 * (1 << 20)
 
 THREADING_BUFFER_SIZE = 10_000
