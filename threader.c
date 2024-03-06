@@ -5,43 +5,32 @@
 #include <string.h>
 #include <time.h>
 
-const char *SH_MEM_NAME_FNAME = "/SHM_FNAME";
-const char *SH_MEM_NAME_LNAME = "/SHM_LNAME";
 const int SH_MEM_SZ = (1 << 20);
 
-char* get_fname_ptr() {
-    int shm_fname_fd;
-    char *p_fname;
+char* get_shared_mem_ptr(const char *shm_name) {
+    int shm_fd;
+    char *ptr;
 
-    shm_fname_fd = shm_open(SH_MEM_NAME_FNAME, O_RDWR, 0666);
-    if (shm_fname_fd == -1) {
-        fprintf(stderr, "%s\n", "FAILURE: couldn't open shm_fname");
+    shm_fd = shm_open(shm_name, O_RDWR, 0666);
+    if (shm_fd == -1) {
+        fprintf(stderr, "FAILURE: couldn't open shared memory for %s\n", shm_name);
         exit(EXIT_FAILURE);
     }
-    p_fname = mmap(NULL, SH_MEM_SZ, PROT_WRITE | PROT_READ, MAP_SHARED, shm_fname_fd, 0);
-    if (p_fname == MAP_FAILED) {
-        fprintf(stderr, "%s\n", "FAILURE: couldn't map fname");
+    ptr = mmap(NULL, SH_MEM_SZ, PROT_WRITE | PROT_READ, MAP_SHARED, shm_fd, 0);
+    if (ptr == MAP_FAILED) {
+        fprintf(stderr, "FAILURE: couldn't map shared memory for %s\n", shm_name);
         exit(EXIT_FAILURE);
     }
-    return p_fname;
+    return ptr;
 }
 
-char* get_lname_ptr() {
-    int shm_lname_fd = shm_open(SH_MEM_NAME_LNAME, O_RDWR);
-    char *p_lname = mmap(NULL, SH_MEM_SZ, PROT_WRITE | PROT_READ, MAP_SHARED, shm_lname_fd, 0);
-    if (shm_lname_fd == -1) {
-        fprintf(stderr, "%s\n", "FAILURE: couldn't open shm_lname");
-        exit(EXIT_FAILURE);
-    }
-    if (p_lname == MAP_FAILED) {
-        fprintf(stderr, "%s\n", "FAILURE: couldn't map lname");
-        exit(EXIT_FAILURE);
-    }
-    return p_lname;
+static int cmpstringp(const void *p1, const void *p2) {
+    return strcmp((char*)p1, (char*) p2);
 }
 
-void shuffle(char *array, int n, int size) {
-    srand(time(NULL));
+void shuffle(char *array, int n, int size, unsigned int seed) {
+    srand(seed);
+
     if (n > 1) {
         for (int i = 0; i < n - 1; i++) {
             int j = i + rand() % (n - i);
@@ -57,16 +46,25 @@ void shuffle(char *array, int n, int size) {
     }
 }
 
-void shuffle_fname(int rowcount, int max_word_len) {
-    char *ptr = get_fname_ptr();
+void shuffle_data(int rowcount, int max_word_len, const char *shm_name, unsigned int seed) {
+    char *ptr = get_shared_mem_ptr(shm_name);
     if (ptr == MAP_FAILED) {
-        fprintf(stderr, "%s\n", "FAILURE: couldn't call get_fname_ptr");
+        fprintf(stderr, "FAILURE: couldn't call get_ptr function\n");
         exit(EXIT_FAILURE);
     }
-    shuffle((char *)ptr, rowcount, max_word_len);
+    shuffle(ptr, rowcount, max_word_len, seed);
 }
 
-void shuffle_lname(int rowcount, int max_word_len) {
-    char *ptr = get_lname_ptr();
-    shuffle((char *)ptr, rowcount, max_word_len);
+void sort(char *array, int n, int size) {
+    qsort(&array[0], n - 1, size, cmpstringp);
+
+}
+
+void sort_data(int rowcount, int max_word_len, const char *shm_name) {
+    char *ptr = get_shared_mem_ptr(shm_name);
+    if (ptr == MAP_FAILED) {
+        fprintf(stderr, "FAILURE: couldn't call get_ptr function\n");
+        exit(EXIT_FAILURE);
+    }
+    sort(ptr, rowcount, max_word_len);
 }
