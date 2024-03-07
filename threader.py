@@ -15,6 +15,7 @@ from utilities import constants as const
 # TODO: replace this with argparse, as is done in legacy
 NUM_ROWS = 100000
 
+
 class SQLiteColumns:
     def __init__(self, db_path: str):
         conn = sqlite3.connect(db_path)
@@ -205,30 +206,6 @@ class RowGenerator:
             resolved_arg = arg_str
         return resolved_arg
 
-    def _make_with_threads(self, data_dict: dict):
-        cog_inst = self.col_order_gen(data_dict)
-        threads = []
-        return_dict: dict = {}
-        topo_graph = cog_inst.generate_topo_graph()
-        col_order = cog_inst.generate_col_order()
-        for col in topo_graph:
-            resolved_arg = self.resolve_arg(data_dict[col].get("args", ""), self)
-            t = Thread(
-                target=self.generate_data,
-                args=(col_order[col], col, self.num_rows, return_dict, resolved_arg),
-            )
-            t.start()
-            threads.append(t)
-
-        for t in threads:
-            t.join()
-
-        sorted_data = [return_dict[x] for x in sorted(return_dict.keys())]
-        combined_data = list(zip(*sorted_data))
-        rows = [list(zip(*x)) for x in combined_data]
-
-        return rows
-
     def make_with_threads(self, data_dict: dict):
         cog_inst = self.col_order_gen(data_dict)
         threads = []
@@ -328,7 +305,7 @@ if __name__ == "__main__":
     row_gen.row_builder()
     shm.shm_fname.close()
     shm.shm_lname.close()
+    shm.shm_words.close()
     shm.shm_fname.unlink()
     shm.shm_lname.unlink()
-    shm.shm_words.close()
     shm.shm_words.unlink()
