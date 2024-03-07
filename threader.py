@@ -13,7 +13,7 @@ from library.generators.word import Word
 from utilities import constants as const
 
 # TODO: replace this with argparse, as is done in legacy
-NUM_ROWS = 100000
+NUM_ROWS = 1_000_000
 
 
 class SQLiteColumns:
@@ -85,8 +85,11 @@ class CreateSharedMem:
         elif not shm_name.startswith("/"):
             shm_name = "/" + shm_name.upper()
         if not seed:
-            seed = getrandbits(32)
-            self.seeds[shm_name].append(seed)
+            if self.seeds.get("PROVIDED"):
+                seed = self.seeds[shm_name].popleft()
+            else:
+                seed = getrandbits(32)
+                self.seeds[shm_name].append(seed)
         shm_name_c = shm_name.encode("utf-8")
         self.lib.shuffle_data(rowcount, max_word_len, shm_name_c, seed)
 
@@ -281,7 +284,12 @@ class RowGenerator:
 
 
 if __name__ == "__main__":
+    import pickle
+
     shm = CreateSharedMem()
+    # with open("seeds.dat", "r+b") as f:
+    #    shm.seeds = pickle.load(f)
+    #    shm.seeds["PROVIDED"] = True
     # TODO: dynamically calculate this
     max_len = 16
     # shm.max_fname[0] == 15
@@ -309,3 +317,5 @@ if __name__ == "__main__":
     shm.shm_fname.unlink()
     shm.shm_lname.unlink()
     shm.shm_words.unlink()
+    # with open("seeds.dat", "w+b") as f:
+    #    pickle.dump(shm.seeds, f)
