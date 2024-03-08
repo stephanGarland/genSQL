@@ -3,9 +3,7 @@ import ctypes
 import json
 import random
 import sqlite3
-import sys
 from collections import deque
-from functools import cache
 from math import floor
 from os import urandom
 from textwrap import dedent
@@ -22,7 +20,7 @@ class Allocator:
         self.id_max = id_max
         self.id_range = self.id_max - self.id_min
         try:
-            self.lib = ctypes.CDLL("./library/fast_shuffle.so")
+            self.lib = ctypes.CDLL("./gensql/utils/libs/fast_shuffle.so")
         except OSError as e:
             raise SystemExit(
                 f"FATAL: couldn't load C library - run `run.sh` or `make`\n\n{e}"
@@ -69,7 +67,7 @@ class PhoneAllocator:
             phone_min, phone_max + 1, ranged_arr=True, shuffle=True
         )
         try:
-            self.lib = ctypes.CDLL("./library/fast_mod.so")
+            self.lib = ctypes.CDLL("./gensql/utils/libs/fast_mod.so")
         except OSError as e:
             raise SystemExit(
                 f"FATAL: couldn't load C library - run `run.sh` or `make`\n\n{e}"
@@ -100,7 +98,7 @@ class PhoneAllocator:
 class UUIDAllocator:
     def __init__(self, num: int, use_uuid_v4: bool = True):
         try:
-            self.lib = ctypes.CDLL("./library/uuid.so")
+            self.lib = ctypes.CDLL("./gensql/utils/libs/uuid.so")
         except OSError as e:
             raise SystemExit(
                 f"FATAL: couldn't load C library - run `run.sh` or `make`\n\n{e}"
@@ -321,11 +319,6 @@ class Help:
 
 
 class Utilities:
-    def __init__(self):
-        # self.conn = sqlite3.connect("db/gensql.db")
-        # self.cursor = self.conn.cursor()
-        pass
-
     def sample(
         self, iterable: list, num_rows: int, num_samples: int = 1
     ) -> list[str] | str:
@@ -336,30 +329,6 @@ class Utilities:
                 return iterable[idx]
             sample_list.append(iterable[idx])
         return sample_list
-
-    @cache
-    def get_country(self, city: str) -> str:
-        # TODO: find a way to not open this every function call,
-        # while also not leaving dangling connections from __init__
-        conn = sqlite3.connect("db/gensql.db")
-        cursor = conn.cursor()
-        query = f"SELECT country FROM cities WHERE city = '{city}' LIMIT 1"
-        cursor.execute(query)
-        result = cursor.fetchone()[0]
-        conn.close()
-        return result
-
-    # TODO: currently unused due to severe slowdown in runner.py, keeping
-    # in case that is worked out to re-benchmark
-    @cache
-    def get_word(self, indices: dict) -> list:
-        conn = sqlite3.connect("db/gensql.db")
-        cursor = conn.cursor()
-        query = f"SELECT word FROM words WHERE id IN ({''', '''.join(indices)})"
-        cursor.execute(query)
-        result = [x[0] for x in cursor.fetchall()]
-        conn.close()
-        return result
 
     def lowercase_schema(self, schema: dict) -> dict:
         """

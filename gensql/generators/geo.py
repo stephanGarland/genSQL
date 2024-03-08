@@ -2,16 +2,16 @@ from collections import deque
 from math import ceil
 
 from .base import BaseGenerator
-from utilities.constants import (
+from gensql.utils.constants import (
     MIN_PHONE_NUMBER,
     MAX_PHONE_NUMBER,
     PHONE_NUMBERS,
 )
 from random import shuffle
-from utilities import utilities
+from gensql.utils import utilities
 
 class Geo(BaseGenerator):
-    def __init__(self, country: str, num_rows: int):
+    def __init__(self, num_rows: int, country: str):
         super().__init__(num_rows)
         self.allocator = utilities.Allocator
         self.country = country

@@ -6,7 +6,7 @@ SYSTEM_TYPE=("${SYSTEM_TYPE[@],,}")
 symlink() {
     local lib
     lib=$1
-    cd library && ln -sf "${SYSTEM_TYPE[0]}_${SYSTEM_TYPE[1]}_${lib}.so" "${lib}.so" && cd - &>/dev/null || exit 1
+    cd gensql/utils/libs && ln -sf "${SYSTEM_TYPE[0]}_${SYSTEM_TYPE[1]}_${lib}.so" "${lib}.so" && cd - &>/dev/null || exit 1
 }
 
 case ${SYSTEM_TYPE[0]} in
@@ -16,6 +16,7 @@ case ${SYSTEM_TYPE[0]} in
         symlink "uuid"
         symlink "fast_mod"
         symlink "fast_shuffle"
+        symlink "char_shuffle"
         ;;
     *)
         printf "%s\n" "ERROR: No ${SYSTEM_TYPE[1]} libraries are available"
@@ -29,6 +30,7 @@ case ${SYSTEM_TYPE[0]} in
         symlink "uuid"
         symlink "fast_mod"
         symlink "fast_shuffle"
+        symlink "char_shuffle"
         ;;
     *)
         printf "%s\n" "ERROR: No ${SYSTEM_TYPE[1]} libraries are available"

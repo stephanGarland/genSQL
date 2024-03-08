@@ -7,10 +7,11 @@ from queue import Queue
 from random import getrandbits
 from threading import Event, Thread
 
-from library.generators.email import Email
-from library.generators.geo import Geo
-from library.generators.word import Word
-from utilities import constants as const
+from gensql.generators.email import Email
+from gensql.generators.geo import Geo
+from gensql.generators.ids import SSN
+from gensql.generators.word import Word
+from gensql.utils import constants as const
 
 # TODO: replace this with argparse, as is done in legacy
 NUM_ROWS = 1_000_000
@@ -59,7 +60,7 @@ class CreateSharedMem:
             name=const.SH_MEM_NAME_WORDS, create=True, size=const.SH_MEM_SZ
         )
 
-        self.lib = ctypes.CDLL("library/char_shuffle.so")
+        self.lib = ctypes.CDLL("./gensql/utils/libs/char_shuffle.so")
 
         self.lib.get_shared_mem_ptr.argtypes = [ctypes.c_char_p]
         self.lib.get_shared_mem_ptr.restype = ctypes.c_void_p
@@ -119,6 +120,8 @@ class ThreadedFileWriter:
                     break
                 for chunk in chunks:
                     for row in chunk:
+                        # TODO: consider another way to encapsulate single quotes
+                        #f.write(f"{','.join(row)}\n")
                         f.write(
                             ",".join(
                                 map(
@@ -175,6 +178,7 @@ class RowGenerator:
             self.last_name,
         )
         # self.geo = Geo(country, NUM_ROWS)
+        self.ssn = SSN(NUM_ROWS)
         self.num_rows = num_rows
         self.writer_queue: Queue = Queue()
         self.writer = ThreadedFileWriter(file_name, self.writer_queue)
@@ -189,6 +193,7 @@ class RowGenerator:
             "first_name": self.first_name.generate,
             "last_name": self.last_name.generate,
             # "phone": self.geo.make_phone,
+            "ssn": self.ssn.generate,
         }
         generator = fn_map[data_type](*args)
         data = []
@@ -260,6 +265,7 @@ class RowGenerator:
             "first_name": {},
             "last_name": {},
             "email": {"depends_on": ["first_name", "last_name"]},
+            "ssn": {},
             # "email": {
             #    "args": ["self.first_name", "self.last_name"],
             #    "depends_on": ["first_name", "last_name"],

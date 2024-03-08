@@ -64,7 +64,7 @@ PHONE_NUMBERS = {
     "us": lambda x: f"+1 {x[0:3]}-{x[3:6]}-{x[6:10]}",
 }
 
-SSNS = lambda x: f"{x[0:3]-x[4:6]-x[7:11]}"
+SSNS = lambda x: f"{x[0:3]}-{x[3:5]}-{x[6:11]}"
 
 SQLITE_DB = "./db/gensql.db"
 

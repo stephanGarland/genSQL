@@ -19,11 +19,11 @@ make:
 		echo "On openSUSE, use: sudo zypper in libuuid-devel"; \
 		exit 1; \
 	fi
-	$(CC) $(CFLAGS) library/char_shuffle.c -o library/char_shuffle.so
-	$(CC) $(CFLAGS) library/fast_shuffle.c -o library/fast_shuffle.so
-	$(CC) $(CFLAGS) library/fast_mod.c -o library/fast_mod.so
-	$(CC) $(CFLAGS) library/uuid.c -L$(LDFLAGS) $(LDLIBS) -o library/uuid.so
+	$(CC) $(CFLAGS) gensql/utils/libs/src/char_shuffle.c -o gensql/utils/libs/char_shuffle.so
+	$(CC) $(CFLAGS) gensql/utils/libs/src/fast_shuffle.c -o gensql/utils/libs/fast_shuffle.so
+	$(CC) $(CFLAGS) gensql/utils/libs/src/fast_mod.c -o gensql/utils/libs/fast_mod.so
+	$(CC) $(CFLAGS) gensql/utils/libs/src/uuid.c -L$(LDFLAGS) $(LDLIBS) -o gensql/utils/libs/uuid.so
 
 .PHONY: clean
 clean:
-	rm -f library/fast_shuffle.so library/fast_mod.so library/uuid.so library/char_shuffle.so
+	rm -f gensql/utils/libs/*.so 

@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from collections import deque
 from math import floor
 
-from library.db.sqlite.connection import SQLiteMixin
+from gensql.utils.connections import SQLiteMixin
 
 class BaseGenerator(ABC, SQLiteMixin):
     def __init__(self, num_rows: int, shuffle_callback = None):

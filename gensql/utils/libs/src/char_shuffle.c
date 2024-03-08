@@ -5,6 +5,7 @@
 #include <string.h>
 #include <time.h>
 
+// TODO: sync this with Python
 const int SH_MEM_SZ = (1 << 20);
 
 char* get_shared_mem_ptr(const char *shm_name) {
