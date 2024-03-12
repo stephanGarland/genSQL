@@ -172,6 +172,5 @@ poetry.toml
 *.csv
 *.sql
 *.gz
-library/fast_mod.so
-library/fast_shuffle.so
-library/uuid.so
+db/*.db
+library/*.so
