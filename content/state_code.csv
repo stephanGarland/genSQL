@@ -1,0 +1,60 @@
+code_state,abbrev,code_fips,name
+AK,Alaska,02,Alaska
+AL,Ala.,01,Alabama
+AR,Ark.,05,Arkansas
+AS,,,American Samoa
+AZ,Ariz.,04,Arizona
+CA,Calif.,06,California
+CO,Colo.,08,Colorado
+CT,Conn.,09,Connecticut
+DC,D.C.,,Dist. of Columbia
+DE,Del.,10,Delaware
+FL,Fla.,12,Florida
+FM,,,Federated States of Micronesia
+GA,Ga.,13,Georgia
+GU,Guam,,Guam
+HI,Hawaii,15,Hawaii
+IA,Iowa,19,Iowa
+ID,Idaho,16,Idaho
+IL,Ill.,17,Illinois
+IN,Ind.,18,Indiana
+KS,Kans.,20,Kansas
+KY,Ky.,21,Kentucky
+LA,La.,22,Louisiana
+MA,Mass.,25,Massachusetts
+MD,Md.,24,Maryland
+ME,Maine,23,Maine
+MH,,,Marshall Islands
+MI,Mich.,26,Michigan
+MN,Minn.,27,Minnesota
+MO,Mo.,29,Missouri
+MP,,,Mariana Islands
+MS,Miss.,28,Mississippi
+MT,Mont.,30,Montana
+NC,N.C.,37,North Carolina
+ND,N.D.,38,North Dakota
+NE,Nebr.,31,Nebraska
+NH,N.H.,33,New Hampshire
+NJ,N.J.,34,New Jersey
+NM,N.M.,35,New Mexico
+NV,Nev.,32,Nevada
+NY,N.Y.,36,New York
+OH,Ohio,39,Ohio
+OK,Okla.,40,Oklahoma
+OR,Ore.,41,Oregon
+PA,Pa.,42,Pennsylvania
+PR,P.R.,72,Puerto Rico
+PW,,,Palau
+RI,R.I.,44,Rhode Island
+SC,S.C.,45,South Carolina
+SD,S.D.,46,South Dakota
+TN,Tenn.,47,Tennessee
+TX,Tex.,48,Texas
+UT,Utah,49,Utah
+VA,Va.,51,Virginia
+VI,V.I.,,Virgin Islands
+VT,Vt.,50,Vermont
+WA,Wash.,53,Washington
+WI,Wis.,55,Wisconsin
+WV,W.Va.,54,West Virginia
+WY,Wyo.,56,Wyoming
