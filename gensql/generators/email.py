@@ -1,46 +1,63 @@
-from collections import deque
+import ctypes
+from typing import Callable
 
-from .word import Word
+from .base import BaseGenerator
+from .base_combined import CombinedGenerator
+from .word import WordGenerator
+
+# TODO: have formatting options, e.g.
+# stephan.garland@common.tld
+# s.garland@common.tld
+# sgarland@common.tld
+# garland.stephan@common.tld
+# first.last@random.tld
 
 
-class Email(Word):
+class EmailGenerator(BaseGenerator):
     def __init__(
-        self, num_rows: int, shm, word, shuffle_callback, fname_instance, lname_instance
+        self,
+        num_rows: int,
+        word: str,
+        shuffle_callback: Callable,
+        fname_args: dict,
+        lname_args: dict,
+        domain_args: dict,
     ):
-        super().__init__(num_rows, shm, word, shuffle_callback)
-        self.shm = shm
-        self.fname_instance = fname_instance
-        self.lname_instance = lname_instance
-        self.fname_index = 0
-        self.lname_index = 0
-        self.len_words = len(self.shm.words)
-        self.words = self._load_words_from_shm("words")
+        super().__init__(num_rows)
+        fname_args["byte_array"].reset_indices()
+        lname_args["byte_array"].reset_indices()
+        domain_args["byte_array"].reset_indices()
+        self.fname_indices = fname_args["byte_array"].indices
+        self.lname_indices = lname_args["byte_array"].indices
+        self.domain_indices = domain_args["byte_array"].indices
+        self.first_name_generator = WordGenerator(
+            num_rows, **fname_args, shuffle_callback=shuffle_callback
+        )
+        self.last_name_generator = WordGenerator(
+            num_rows, **lname_args, shuffle_callback=shuffle_callback
+        )
+        self.domain_generator = WordGenerator(
+            num_rows, **domain_args, shuffle_callback=shuffle_callback
+        )
+        self.shuffle_callback = shuffle_callback
 
-    def generate_chunk(self, *args):
-        emails_chunk = deque()
-        # TODO: have formatting options, e.g.
-        # stephan.garland@common.tld
-        # s.garland@common.tld
-        # sgarland@common.tld
-        # garland.stephan@common.tld
-        # first.last@random.tld
-        self.fnames = self.fname_instance.buffer.split(b"\x00")
-        self.lnames = self.lname_instance.buffer.split(b"\x00")
-        for _ in range(self.chunk_size):
-            try:
-                domain = self.words.pop()
-            except IndexError:
-                self.shuffle_callback(self.len_words, 16, "words")
-                self.words = self._load_words_from_shm("words")
-                domain = self.words.pop()
-            try:
-                first_name = self.fnames[self.fname_index].decode().lower()
-                last_name = self.lnames[self.lname_index].decode().lower()
-            except IndexError:
-                print(
-                    f"fname_index: {self.fname_index} lname_index: {self.lname_index}"
-                )
-            self.fname_index += 1
-            self.lname_index += 1
-            emails_chunk.append(f"{first_name}.{last_name}@{domain}.com")
-        yield emails_chunk
+    def generate_chunk(self, chunk_size: int):
+        first_name_chunks = self.first_name_generator.generate_chunk(chunk_size)
+        last_name_chunks = self.last_name_generator.generate_chunk(chunk_size)
+        domain_chunks = self.domain_generator.generate_chunk(chunk_size)
+
+        for first_names, last_names, domains in zip(
+            first_name_chunks, last_name_chunks, domain_chunks
+        ):
+            emails: list = []
+
+            for i in range(chunk_size):
+                email = bytearray()
+                email += first_names[i].lower()
+                email += b"."
+                email += last_names[i].lower()
+                email += b"@"
+                email += domains[i]
+                email += b".com"
+                emails.append(email)
+            yield emails

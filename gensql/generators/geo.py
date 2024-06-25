@@ -1,14 +1,13 @@
 from collections import deque
 from math import ceil
+from random import shuffle
+
+from gensql.utils import utilities
+from gensql.utils.constants import (MAX_PHONE_NUMBER, MIN_PHONE_NUMBER,
+                                    PHONE_NUMBERS)
 
 from .base import BaseGenerator
-from gensql.utils.constants import (
-    MIN_PHONE_NUMBER,
-    MAX_PHONE_NUMBER,
-    PHONE_NUMBERS,
-)
-from random import shuffle
-from gensql.utils import utilities
+
 
 class Geo(BaseGenerator):
     def __init__(self, num_rows: int, country: str):
@@ -23,7 +22,7 @@ class Geo(BaseGenerator):
         q2 = """SELECT DISTINCT cc.code, c.country FROM country cc JOIN city c ON c.country = cc.country"""
         self.cursor.execute(q2)
         result = self.cursor.fetchall()
-        self.cc_map = {v:k.lower() for k,v in result}
+        self.cc_map = {v: k.lower() for k, v in result}
         self._prepare_city()
         self._prepare_country()
         self._prepare_phone_allocator()
@@ -53,11 +52,11 @@ class Geo(BaseGenerator):
 
     def make_city(self, *args):
         for i in range(0, self.num_rows, self.chunk_size):
-            yield deque(self.city[i:i+self.chunk_size])
+            yield deque(self.city[i : i + self.chunk_size])
 
     def make_country(self, *args):
         for i in range(0, self.num_rows, self.chunk_size):
-            yield deque(self.country[i:i+self.chunk_size])
+            yield deque(self.country[i : i + self.chunk_size])
 
     def make_phone(self, *args) -> deque:
         for i in range(0, self.num_rows, self.chunk_size):

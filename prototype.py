@@ -1,40 +1,73 @@
+import random
+
+from gensql.generators.email import EmailGenerator
+from gensql.generators.word import WordGenerator
+from gensql.utils.byte_array import ByteArray
 from gensql.utils.connections import SQLiteColumnGetter
-from gensql.utils.shmem import ShMemList
+from gensql.utils.writer import Writer
 from gensql.worker import Worker
-from gensql.generators.word_new import Word
+
+CHUNK_SIZE = 100_000
+NUM_ROWS = 1_000_000
 
 
-def cleanup():
-    for x in [shml_fname, shml_lname, shml_word]:
-        x.shmem.shm.close()
-        x.shmem.shm.unlink()
+def make_gen(funcs):
+    generators = [func.generate_column() for func in funcs]
+    for chunks in zip(*generators):
+        yield chunks
 
-NUM_ROWS = 100_000
 
 if __name__ == "__main__":
     sql = SQLiteColumnGetter
+
+    seed = random.getrandbits(32)
+
     max_fname, f_names = sql("first_name", "person_name").get_col()
     max_lname, l_names = sql("last_name", "person_name").get_col()
     max_word, words = sql("word", "word").get_col()
 
-    shml_fname = ShMemList(
-        shmem_name="first_name", create=True, sequence=f_names
+    byte_array_fname = ByteArray(f_names)
+    byte_array_lname = ByteArray(l_names)
+    byte_array_word = ByteArray(words)
+
+    w_fname = Worker(
+        NUM_ROWS,
+        byte_array_fname.seeds,
+        WordGenerator,
+        {
+            "word": "first_name",
+            "byte_array": byte_array_fname,
+        },
+        seed,
     )
-    shml_lname = ShMemList(
-        shmem_name="last_name", create=True, sequence=l_names
+    w_lname = Worker(
+        NUM_ROWS,
+        byte_array_lname.seeds,
+        WordGenerator,
+        {
+            "word": "last_name",
+            "byte_array": byte_array_lname,
+        },
+        seed,
     )
-    shml_word = ShMemList(
-        shmem_name="word", create=True, sequence=words
+    w_email = Worker(
+        NUM_ROWS,
+        byte_array_word.seeds,
+        EmailGenerator,
+        {
+            "word": "email",
+            "fname_args": {"word": "first_name", "byte_array": byte_array_fname},
+            "lname_args": {"word": "last_name", "byte_array": byte_array_lname},
+            "domain_args": {"word": "domain", "byte_array": byte_array_word},
+        },
+        seed,
     )
 
-    w_fname = Worker(NUM_ROWS, shml_fname.seeds, Word, "first_name")
-    w_lname = Worker(NUM_ROWS, shml_lname.seeds, Word, "last_name")
-    w_word = Worker(NUM_ROWS, shml_word.seeds, Word, "word")
+    writer = Writer("test.csv")
+    writer.start()
 
-    fnames = w_fname.generate_words()
-    lnames = w_lname.generate_words()
-    words = w_word.generate_words()
+    for chunk in make_gen([w_fname, w_lname, w_email]):
+        writer.write_chunk(chunk)
 
-    breakpoint()
-
-    cleanup()
+    writer.end()
+    writer.join()
