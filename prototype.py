@@ -17,6 +17,35 @@ def make_gen(funcs):
         yield chunks
 
 
+# TODO: have this do ordering as well
+def make_ordered_format(formatting: dict) -> bytes:
+    """
+    :formatting
+        {
+            "separator": "." | "",
+            "sections": [
+                {
+                    "name": str,
+                    "length": int  # -1 indicates unlimited
+                }
+            ]
+        }
+    """
+    format_str = []
+    for i, key in enumerate(formatting["sections"]):
+        if key["name"] != "domain":
+            format_str.append("%")
+        if key["length"] > 0:
+            format_str.append(f".{key['length']}")
+        if key["name"] != "domain":
+            format_str.append("b")
+        if i == 0:
+            format_str.append(formatting["separator"])
+        if key["name"] == "domain":
+            format_str.append("@%b.com")
+    return "".join(format_str).encode("utf-8")
+
+
 if __name__ == "__main__":
     sql = SQLiteColumnGetter
 
@@ -29,6 +58,15 @@ if __name__ == "__main__":
     byte_array_fname = ByteArray(f_names)
     byte_array_lname = ByteArray(l_names)
     byte_array_word = ByteArray(words)
+
+    email_fmt_str = {
+        "separator": ".",
+        "sections": [
+            {"name": "first", "length": -1},
+            {"name": "last", "length": -1},
+            {"name": "domain", "length": -1},
+        ],
+    }
 
     w_fname = Worker(
         NUM_ROWS,
@@ -56,9 +94,22 @@ if __name__ == "__main__":
         EmailGenerator,
         {
             "word": "email",
-            "fname_args": {"word": "first_name", "byte_array": byte_array_fname},
-            "lname_args": {"word": "last_name", "byte_array": byte_array_lname},
-            "domain_args": {"word": "domain", "byte_array": byte_array_word},
+            "fname_args": {
+                "is_lower": True,
+                "word": "first_name",
+                "byte_array": byte_array_fname,
+            },
+            "lname_args": {
+                "is_lower": True,
+                "word": "last_name",
+                "byte_array": byte_array_lname,
+            },
+            "format_str": make_ordered_format(email_fmt_str),
+            "order": ["first_names", "last_names", "domains"],
+            "domain_args": {
+                "word": "domain",
+                "byte_array": byte_array_word,
+            },
         },
         seed,
     )
