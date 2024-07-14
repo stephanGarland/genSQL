@@ -30,7 +30,7 @@ void uuid_generate_v4(uuid_t out) {
     out[6] = (out[6] & 0x0f) | 0x40;
     out[8] = (out[8] & 0x3f) | 0x80;
 }
-char **fill_array (uint32_t count, bool use_v4, bool use_v7) {
+char **fill_array (uint32_t count, int uuid_version) {
     uuid_t uuid;
     char **arr = calloc(count, sizeof(char *));
     if (!arr) {
@@ -47,9 +47,9 @@ char **fill_array (uint32_t count, bool use_v4, bool use_v7) {
             return NULL;
         }
 
-        if (use_v4) {
+        if (uuid_version == 4) {
             uuid_generate_v4(uuid);
-        } else if (use_v7) {
+        } else if (uuid_version == 7) {
             uuid_generate_v7(uuid);
         } else {
             for (uint32_t j = 0; j <= i; j++) {

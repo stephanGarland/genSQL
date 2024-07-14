@@ -1,5 +1,5 @@
-import time
 import random
+import time
 
 from gensql.generators.email import EmailGenerator
 from gensql.generators.uuid import UUIDGenerator
@@ -120,7 +120,7 @@ if __name__ == "__main__":
         NUM_ROWS,
         {},
         UUIDGenerator,
-        {"uuid_v4": True, "uuid_v7": False, "word": "uuid"},
+        {"uuid_version": 7, "word": "uuid"},
         seed,
     )
 
