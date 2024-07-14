@@ -1,6 +1,8 @@
+import time
 import random
 
 from gensql.generators.email import EmailGenerator
+from gensql.generators.uuid import UUIDGenerator
 from gensql.generators.word import WordGenerator
 from gensql.utils.byte_array import ByteArray
 from gensql.utils.connections import SQLiteColumnGetter
@@ -114,10 +116,18 @@ if __name__ == "__main__":
         seed,
     )
 
+    w_uuid = Worker(
+        NUM_ROWS,
+        {},
+        UUIDGenerator,
+        {"uuid_v4": True, "uuid_v7": False, "word": "uuid"},
+        seed,
+    )
+
     writer = Writer("test.csv")
     writer.start()
 
-    for chunk in make_gen([w_fname, w_lname, w_email]):
+    for chunk in make_gen([w_fname, w_lname, w_email, w_uuid]):
         writer.write_chunk(chunk)
 
     writer.end()
