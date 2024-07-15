@@ -1,7 +1,6 @@
 import ctypes
 import random
 
-from gensql.generators.email import EmailGenerator
 from gensql.utils.byte_array import ByteArray
 
 
@@ -20,7 +19,7 @@ class Worker:
             seed = random.getrandbits(32)
         seed_dict.setdefault(column_args["word"], seed)
         self.seed = seed
-        fast_shuffle_lib = ctypes.CDLL("./gensql/utils/libs/fast_shuffle.so")
+        fast_shuffle_lib = ctypes.CDLL("./gensql/lib/bin/fast_shuffle.so")
         fast_shuffle_lib.shuf.argtypes = [
             ctypes.POINTER(ctypes.c_uint32),
             ctypes.c_uint32,

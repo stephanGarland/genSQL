@@ -1,6 +1,7 @@
 import random
 import time
 
+from gensql.generators.datetime import DateGenerator
 from gensql.generators.email import EmailGenerator
 from gensql.generators.uuid import UUIDGenerator
 from gensql.generators.word import WordGenerator
@@ -124,10 +125,19 @@ if __name__ == "__main__":
         seed,
     )
 
+    # TODO: strftime is slow as hell; fix that
+    w_nums = Worker(
+        NUM_ROWS,
+        {},
+        DateGenerator,
+        {"min_dt": "1995-05-23 00:00:00", "max_dt": "2038-01-01 00:00:00", "word": "datetime"},
+        seed,
+    )
+
     writer = Writer("test.csv")
     writer.start()
 
-    for chunk in make_gen([w_fname, w_lname, w_email, w_uuid]):
+    for chunk in make_gen([w_fname, w_lname, w_email, w_nums, w_uuid]):
         writer.write_chunk(chunk)
 
     writer.end()

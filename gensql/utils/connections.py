@@ -1,7 +1,7 @@
 import sqlite3
 from contextlib import closing
 
-from .constants import SQLITE_DB
+from gensql.core.constants import SQLITE_DB
 
 
 class SQLiteColumnGetter:

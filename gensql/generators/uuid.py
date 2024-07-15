@@ -16,7 +16,7 @@ class UUIDGenerator(BaseGenerator):
     ):
         super().__init__(num_rows)
         self.num_rows = num_rows
-        self.lib = ctypes.CDLL("gensql/utils/libs/uuid.so")
+        self.lib = ctypes.CDLL("./gensql/lib/bin/uuid.so")
         self.lib.fill_array.argtypes = [ctypes.c_int, ctypes.c_int]
         self.lib.fill_array.restype = ctypes.POINTER(ctypes.c_char_p)
         if uuid_version == 4:

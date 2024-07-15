@@ -45,10 +45,10 @@ build:
 		echo "On Debian/Ubuntu, use: sudo apt-get install libbsd-dev"; \
 		echo "On openSUSE, use: sudo zypper install libbsd-devel"; \
 	fi
-	$(CC) $(CFLAGS) gensql/utils/libs/src/char_shuffle.c -o gensql/utils/libs/char_shuffle.so
-	$(CC) $(CFLAGS) gensql/utils/libs/src/fast_shuffle.c -o gensql/utils/libs/fast_shuffle.so
-	$(CC) $(CFLAGS) gensql/utils/libs/src/fast_mod.c -o gensql/utils/libs/fast_mod.so
-	$(CC) $(CFLAGS) gensql/utils/libs/src/uuid.c -L$(LDFLAGS) $(LDLIBS) -o gensql/utils/libs/uuid.so $(LDSTATICLIBS)
+	$(CC) $(CFLAGS) gensql/lib/src/fast_shuffle.c -o gensql/lib/bin/fast_shuffle.so
+	$(CC) $(CFLAGS) gensql/lib/src/fast_mod.c -o gensql/lib/bin/fast_mod.so
+	$(CC) $(CFLAGS) gensql/lib/src/uuid.c -L$(LDFLAGS) $(LDLIBS) -o gensql/lib/bin/uuid.so $(LDSTATICLIBS)
+	$(CC) $(CFLAGS) gensql/lib/src/xoshiro.c -o gensql/lib/bin/xoshiro.so
 
 clean:
-	rm -f gensql/utils/libs/*.so
+	rm -f gensql/lib/bin/**/*.so
