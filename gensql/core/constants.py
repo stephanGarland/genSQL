@@ -22,8 +22,11 @@ ALLOWED_COLS = [
 
 ALLOWED_UNIQUES = ["email"]
 
-DEFAULT_INSERT_CHUNK_SIZE = 10000
+DEFAULT_DATETIME_FMT = "%Y-%m-%d %H:%M:%S"
+DEFAULT_GENERATE_CHUNK_SIZE = 100_000
+DEFAULT_INSERT_CHUNK_SIZE = 10_000
 DEFAULT_MAX_FIELD_PCT = 0.15
+DEFAULT_NUM_ROWS = 1_000
 
 JSON_DEFAULT_KEYS = [f"{x}_key" for x in ascii_lowercase][::-1]
 JSON_OBJ_MAX_KEYS = 3
@@ -49,6 +52,9 @@ MYSQL_INT_MIN_MAX = {
 
 MIN_PHONE_NUMBER = 11111
 MAX_PHONE_NUMBER = 99999
+MAX_EMAIL_ADDR_LEN = 254
+MAX_EMAIL_LOCAL_LEN = 64
+MAX_EMAIL_DOMAIN_LEN = 252  # 254 - separator - mininimum local
 MIN_SSN = 11111
 MAX_SSN = 99999
 
@@ -64,7 +70,8 @@ PHONE_NUMBERS = {
     "us": lambda x: f"+1 {x[0:3]}-{x[3:6]}-{x[6:10]}",
 }
 
-SSNS = lambda x: f"{x[0:3]}-{x[3:5]}-{x[6:11]}"
+def SSNS(x):
+    return f"{x[0:3]}-{x[3:5]}-{x[6:11]}"
 
 SQLITE_DB = "./db/gensql.db"
 

@@ -1,17 +1,28 @@
+import ctypes
 import random
 import time
 
 from gensql.generators.datetime import DateGenerator
-from gensql.generators.email import EmailGenerator
-from gensql.generators.uuid import UUIDGenerator
+from gensql.generators.email import DomainGenerator, EmailFmt, EmailGenerator
+from gensql.generators.uuid import UUIDGenerator, UUIDVersion
 from gensql.generators.word import WordGenerator
-from gensql.utils.byte_array import ByteArray
 from gensql.utils.connections import SQLiteColumnGetter
+from gensql.utils.shuffleable_byte_array import ShuffleableByteArray
 from gensql.utils.writer import Writer
-from gensql.worker import Worker
+from gensql.core.worker import Worker
 
 CHUNK_SIZE = 100_000
 NUM_ROWS = 1_000_000
+
+
+def load_shuffler():
+    lib = ctypes.CDLL("./gensql/lib/bin/fast_shuffle.so")
+    lib.shuf.argtypes = [
+        ctypes.POINTER(ctypes.c_uint32),
+        ctypes.c_uint32,
+        ctypes.c_uint32,
+    ]
+    return lib
 
 
 def make_gen(funcs):
@@ -20,124 +31,61 @@ def make_gen(funcs):
         yield chunks
 
 
-# TODO: have this do ordering as well
-def make_ordered_format(formatting: dict) -> bytes:
-    """
-    :formatting
-        {
-            "separator": "." | "",
-            "sections": [
-                {
-                    "name": str,
-                    "length": int  # -1 indicates unlimited
-                }
-            ]
-        }
-    """
-    format_str = []
-    for i, key in enumerate(formatting["sections"]):
-        if key["name"] != "domain":
-            format_str.append("%")
-        if key["length"] > 0:
-            format_str.append(f".{key['length']}")
-        if key["name"] != "domain":
-            format_str.append("b")
-        if i == 0:
-            format_str.append(formatting["separator"])
-        if key["name"] == "domain":
-            format_str.append("@%b.com")
-    return "".join(format_str).encode("utf-8")
-
-
 if __name__ == "__main__":
     sql = SQLiteColumnGetter
 
-    seed = random.getrandbits(32)
+    fname_seed = random.getrandbits(32)
+    lname_seed = random.getrandbits(32)
+    domain_seed = random.getrandbits(32)
 
     max_fname, f_names = sql("first_name", "person_name").get_col()
     max_lname, l_names = sql("last_name", "person_name").get_col()
     max_word, words = sql("word", "word").get_col()
 
-    byte_array_fname = ByteArray(f_names)
-    byte_array_lname = ByteArray(l_names)
-    byte_array_word = ByteArray(words)
+    byte_array_fname = ShuffleableByteArray(f_names)
+    byte_array_lname = ShuffleableByteArray(l_names)
+    byte_array_word = ShuffleableByteArray(words)
 
-    email_fmt_str = {
-        "separator": ".",
-        "sections": [
-            {"name": "first", "length": -1},
-            {"name": "last", "length": -1},
-            {"name": "domain", "length": -1},
-        ],
-    }
-
+    fname_gen = WordGenerator(
+        byte_array_fname, is_lower=False, chunk_size=CHUNK_SIZE, generator_name="fname"
+    )
+    lname_gen = WordGenerator(
+        byte_array_lname, is_lower=False, chunk_size=CHUNK_SIZE, generator_name="lname"
+    )
+    domain_gen = DomainGenerator(byte_array_word, is_lower=True, chunk_size=CHUNK_SIZE)
+    email_gen = EmailGenerator(
+        fname_gen,
+        lname_gen,
+        domain_gen,
+        email_fmt=EmailFmt(),
+    )
+    dt_gen = DateGenerator(min_dt="1995-05-23 00:00:00", max_dt="2038-01-01 00:00:00")
+    uuid_gen = UUIDGenerator(uuid_version=UUIDVersion.VER_7)
     w_fname = Worker(
+        fname_gen,
         NUM_ROWS,
-        byte_array_fname.seeds,
-        WordGenerator,
-        {
-            "word": "first_name",
-            "byte_array": byte_array_fname,
-        },
-        seed,
+        seeds={"fname": fname_seed},
+        shuffle_lib=load_shuffler(),
     )
     w_lname = Worker(
+        lname_gen,
         NUM_ROWS,
-        byte_array_lname.seeds,
-        WordGenerator,
-        {
-            "word": "last_name",
-            "byte_array": byte_array_lname,
-        },
-        seed,
+        seeds={"lname": lname_seed},
+        shuffle_lib=load_shuffler(),
     )
     w_email = Worker(
+        email_gen,
         NUM_ROWS,
-        byte_array_word.seeds,
-        EmailGenerator,
-        {
-            "word": "email",
-            "fname_args": {
-                "is_lower": True,
-                "word": "first_name",
-                "byte_array": byte_array_fname,
-            },
-            "lname_args": {
-                "is_lower": True,
-                "word": "last_name",
-                "byte_array": byte_array_lname,
-            },
-            "format_str": make_ordered_format(email_fmt_str),
-            "order": ["first_names", "last_names", "domains"],
-            "domain_args": {
-                "word": "domain",
-                "byte_array": byte_array_word,
-            },
-        },
-        seed,
+        seeds={"fname": fname_seed, "lname": lname_seed, "domain": domain_seed},
+        shuffle_lib=load_shuffler(),
     )
-
-    w_uuid = Worker(
-        NUM_ROWS,
-        {},
-        UUIDGenerator,
-        {"uuid_version": 7, "word": "uuid"},
-        seed,
-    )
-
-    # TODO: strftime is slow as hell; fix that
-    w_nums = Worker(
-        NUM_ROWS,
-        {},
-        DateGenerator,
-        {"min_dt": "1995-05-23 00:00:00", "max_dt": "2038-01-01 00:00:00", "word": "datetime"},
-        seed,
-    )
+    w_dt = Worker(dt_gen, NUM_ROWS)
+    w_uuid = Worker(uuid_gen, NUM_ROWS)
 
     writer = Writer("test.csv")
     writer.start()
 
-    for chunk in make_gen([w_fname, w_lname, w_email, w_nums, w_uuid]):
+    for chunk in make_gen([w_uuid, w_fname, w_lname, w_email, w_dt]):
         writer.write_chunk(chunk)
 
     writer.end()

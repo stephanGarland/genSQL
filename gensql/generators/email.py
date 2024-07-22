@@ -1,130 +1,223 @@
-import ctypes
-from abc import ABC, abstractmethod
-from typing import Callable, List
+from __future__ import annotations
 
-from .base import BaseGenerator
-from .word import WordGenerator
+from collections.abc import Iterable
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Any, List, Optional
 
+from gensql.core.constants import (DEFAULT_GENERATE_CHUNK_SIZE,
+                                   MAX_EMAIL_ADDR_LEN, MAX_EMAIL_DOMAIN_LEN,
+                                   MAX_EMAIL_LOCAL_LEN)
+from gensql.generators.word import WordGenerator
 
-class DomainGenerator(ABC):
-    @abstractmethod
-    def generate_chunk(self, chunk_size: int):
-        pass
-
-
-class StaticDomainGenerator(DomainGenerator):
-    def __init__(self, domain: str):
-        self.domain = domain
-
-    def generate_chunk(self, chunk_size: int) -> bytearray:
-        return bytearray(self.domain.encode("utf-8"))
+if TYPE_CHECKING:
+    from gensql.utils.shuffleable_byte_array import ShuffleableByteArray
 
 
-class RandomDomainGenerator(DomainGenerator):
+@dataclass
+class EmailFmt:
+    de_dupe_with_nums: bool = True  # TODO: implement
+    max_len_domain: int = 0  # TODO: implement
+    max_len_fname: int = 0
+    max_len_lname: int = 0
+    max_len_local: int = 0  # TODO: implement
+    lname_first: bool = False
+    local_separator: str = "."
+    use_fname: bool = True
+    use_lname: bool = True
+    use_random: bool = False  # TODO: implement
+
+    def __post_init__(self):
+        _errors = []
+        show_rfc = True
+        if not self.use_fname | self.use_lname | self.use_random:
+            show_rfc = False
+
+            _errors.append("Must have at least one of fname, lname, random")
+        if (
+            self.max_len_fname + self.max_len_lname > self.max_len_local
+            and self.max_len_local
+        ):
+            _errors.append(
+                f"Combined length of max_len_fname ({self.max_len_fname}) and max_len_lname ({self.max_len_lname}) cannot exceed that of max_len_local ({self.max_len_local})"
+            )
+        if self.max_len_domain > MAX_EMAIL_DOMAIN_LEN:
+            _errors.append(
+                f"Maximum length of domain of email address must be <= {MAX_EMAIL_DOMAIN_LEN}: must have 1 reserved for separator, and a minimum length of 1 in local-part"
+            )
+        if self.max_len_local > MAX_EMAIL_LOCAL_LEN:
+            _errors.append(
+                f"Maximum length of local-part of email address must be <= {MAX_EMAIL_LOCAL_LEN} characters"
+            )
+        if self.max_len_local + self.max_len_domain > MAX_EMAIL_ADDR_LEN:
+            _errors.append(
+                f"Maximum length of local-part and domain of email address must be <= {MAX_EMAIL_ADDR_LEN} characters"
+            )
+        if _errors and show_rfc:
+            _errors.append("See RFC3696 and Errata 1690")
+        if _errors:
+            raise ValueError("\n".join(_errors))
+
+
+@dataclass
+class EmailFmtDefSection:
+    name: str
+    length: int
+
+
+@dataclass
+class EmailFmtDef:
+    local_separator: str
+    sections: list[EmailFmtDefSection]
+
+
+class DomainGenerator:
     def __init__(
         self,
-        num_rows: int,
-        domain_args: dict,
-        shuffle_callback: Callable,
+        byte_array: Optional[ShuffleableByteArray],
+        domain: str = "",
+        generator_name: str = "domain",
+        is_lower: bool = False,
+        chunk_size: int = DEFAULT_GENERATE_CHUNK_SIZE,
     ):
-        self.domain_args = domain_args
-        self.num_rows = num_rows
-        self.shuffle_callback = shuffle_callback
+        self.byte_array = byte_array
+        self.chunk_size = chunk_size
+        self.static_domain = bytearray(domain.encode("utf-8")) if domain else None
 
-    def generate_chunk(self, chunk_size: int):
-        self.domain_args["byte_array"].reset_indices()
-        domain_generator = WordGenerator(
-            self.num_rows, **self.domain_args, shuffle_callback=self.shuffle_callback
+        self.word_generator = (
+            WordGenerator(byte_array, is_lower, chunk_size, generator_name)
+            if byte_array
+            else None
         )
 
-        yield domain_generator
+    def set_shuffle_callback(self, callback):
+        if self.word_generator:
+            self.word_generator.set_shuffle_callback(callback)
+
+    def generate(self, num_rows: int) -> Iterable[List[bytearray]]:
+        if self.static_domain:
+            for i in range(0, num_rows, self.chunk_size):
+                chunk_size = min(self.chunk_size, num_rows - i)
+                yield [self.static_domain] * chunk_size
+        elif (
+            self.word_generator
+            and self.byte_array
+            and self.word_generator.shuffle_callback
+        ):
+            seed_func = (
+                self.word_generator.shuffle_callback.get("domain")
+                or self.word_generator.shuffle_callback["default"]
+            )
+            seed_func(self.byte_array.indices)
+            yield from self.word_generator.generate(num_rows)
+        else:
+            raise ValueError("Either static domain or byte_array must be provided")
+
+    def reset_indices(self):
+        if self.word_generator:
+            self.word_generator.reset_indices()
 
 
-class CommonRandomDomainGenerator(DomainGenerator):
+class EmailGenerator:
     def __init__(
         self,
-        num_rows: int,
-        domain_args: dict,
-        shuffle_callback: Callable,
+        fname_generator: Any,
+        lname_generator: Any,
+        domain_generator: Any,
+        email_fmt: EmailFmt,
+        chunk_size: int = DEFAULT_GENERATE_CHUNK_SIZE,
     ):
-        self.domain_args = domain_args
-        self.num_rows = num_rows
-        self.shuffle_callback = shuffle_callback
+        self.fname_generator = fname_generator
+        self.lname_generator = lname_generator
+        self.domain_generator = domain_generator
+        self.chunk_size = chunk_size
+        email_fmt_def = self._make_email_fmt_def(email_fmt)
+        self.email_fmt = email_fmt
+        self.format_str = self._make_email_fmt_str(email_fmt_def)
 
-    def generate_chunk(self, chunk_size: int) -> bytearray:
-        self.domain_args["byte_array"].reset_indices()
-        domain_generator = WordGenerator(
-            self.num_rows, **self.domain_args, shuffle_callback=self.shuffle_callback
+    def _make_email_fmt_str(self, email_fmt_def: EmailFmtDef) -> bytes:
+        """Creates a printf-style format string for producing emails.
+        Creates a printf-style format string for producing emails.
+        This was chosen over the dict-style purely for speed: it's ~20% faster.
+
+        Examples:
+            %b.%b@%b.com:
+                [bytestring][byestring]@[bytestring.com
+            %.5b.%b@%b.com:
+                [bytestring, max_len=5][bytestring]@[bytestring].com
+        """
+
+        format_str = []
+        for i, key in enumerate(email_fmt_def.sections):
+            if key.name != "domain":
+                format_str.append("%")
+            if key.length > 0:
+                format_str.append(f".{key.length}")
+            if key.name != "domain":
+                format_str.append("b")
+            if i == 0:
+                format_str.append(email_fmt_def.local_separator)
+            # TODO: add other TLDs
+            if key.name == "domain":
+                format_str.append("@%b.com")
+        return "".join(format_str).encode("utf-8")
+
+    def _make_email_fmt_def(self, email_fmt: EmailFmt) -> EmailFmtDef:
+        indices = [1, 0, 2] if email_fmt.lname_first else [0, 1, 2]
+        email_fmt_sections = []
+        email_fmt_sections.append(
+            EmailFmtDefSection("fname", email_fmt.max_len_fname)
+            if email_fmt.use_fname
+            else None
         )
-        domain = domain_generator.generate_chunk(chunk_size)
-        return bytearray(next(domain)[0])
-
-
-class BaseEmailGenerator(BaseGenerator):
-    def __init__(
-        self,
-        num_rows: int,
-        shuffle_callback: Callable,
-        fname_args: dict,
-        lname_args: dict,
-    ):
-        super().__init__(num_rows)
-
-        fname_args["byte_array"].reset_indices()
-        lname_args["byte_array"].reset_indices()
-
-        self.fname_indices = fname_args["byte_array"].indices
-        self.lname_indices = lname_args["byte_array"].indices
-
-        self.fname_generator = WordGenerator(
-            num_rows, **fname_args, shuffle_callback=shuffle_callback
+        email_fmt_sections.append(
+            EmailFmtDefSection("lname", email_fmt.max_len_lname)
+            if email_fmt.use_lname
+            else None
         )
-        self.lname_generator = WordGenerator(
-            num_rows, **lname_args, shuffle_callback=shuffle_callback
+        email_fmt_sections.append(
+            EmailFmtDefSection("domain", email_fmt.max_len_domain)
         )
+        email_fmt_sections = [
+            email_fmt_sections[i] for i in indices if email_fmt_sections[i]
+        ]
 
-class EmailGenerator(BaseEmailGenerator):
-    def __init__(
-        self,
-        num_rows: int,
-        shuffle_callback: Callable,
-        fname_args: dict,
-        lname_args: dict,
-        format_str: str,
-        word: str,
-        order: list,
-        domain_args: dict,
-    ):
-        super().__init__(num_rows, shuffle_callback, fname_args, lname_args)
-        self.domain_generator = WordGenerator(
-            num_rows, **domain_args, shuffle_callback=shuffle_callback
-        )
+        return EmailFmtDef(email_fmt.local_separator, email_fmt_sections)
 
-        self.format_str = format_str
-        self.num_rows = num_rows
-        self.order = order
-        self.shuffle_callback = shuffle_callback
+    def set_shuffle_callback(self, callback):
+        self.fname_generator.set_shuffle_callback(callback)
+        self.lname_generator.set_shuffle_callback(callback)
+        self.domain_generator.set_shuffle_callback(callback)
 
-    def generate_chunk(self, chunk_size: int):
-        generators = {
-            "first_names": self.fname_generator,
-            "last_names": self.lname_generator,
-            "domains": self.domain_generator,
-        }
+    def reset_indices(self):
+        self.fname_generator.reset_indices()
+        self.lname_generator.reset_indices()
+        self.domain_generator.reset_indices()
 
-        # this is ~20% faster than using a map for each chunk creation,
-        # and still allows for ordering to be dictated
-        zipped_chunks = zip(
-            *(generators[name].generate_chunk(chunk_size) for name in self.order)
-        )
-        for x, y, z in zipped_chunks:
-            emails = [
-                self.format_str
-                % (
-                    x[i],
-                    y[i],
-                    z[i],
-                )
-                for i in range(chunk_size)
-            ]
-        yield emails
+    def generate(self, num_rows: int) -> Iterable[List[bytes]]:
+        fname_gen = self.fname_generator.generate(num_rows)
+        lname_gen = self.lname_generator.generate(num_rows)
+        domain_gen = self.domain_generator.generate(num_rows)
+
+        for i in range(0, num_rows, self.chunk_size):
+            # TODO: remove?
+            chunk_size = min(self.chunk_size, num_rows - i)
+            fnames = next(fname_gen)
+            lnames = next(lname_gen)
+            domains = next(domain_gen)
+
+            if self.email_fmt.use_fname and self.email_fmt.use_lname:
+                emails = [
+                    self.format_str % (fname.lower(), lname.lower(), domain)
+                    for fname, lname, domain in zip(fnames, lnames, domains)
+                ]
+            elif self.email_fmt.use_lname:
+                emails = [
+                    self.format_str % (lname.lower(), domain)
+                    for lname, domain in zip(lnames, domains)
+                ]
+            elif self.email_fmt.use_fname:
+                emails = [
+                    self.format_str % (fname.lower(), domain)
+                    for fname, domain in zip(fnames, domains)
+                ]
+            yield emails

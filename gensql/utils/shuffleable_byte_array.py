@@ -2,7 +2,11 @@ import ctypes
 from collections import defaultdict, deque
 
 
-class ByteArray:
+class ShuffleableByteArray:
+    """Creates a list of bytearrays.
+    Creates a list of bytearrays, and also encapsulates seeds and shuffle functions."
+    """
+
     def __init__(self, sequence: list):
         self.bytearray = [bytearray(x) for x in sequence]
         self.len_bytearray = len(self.bytearray)

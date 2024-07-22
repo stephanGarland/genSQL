@@ -1,32 +1,44 @@
+from __future__ import annotations
+
 import ctypes
-from enum import IntEnum
-from typing import Callable
+from enum import Enum
+from typing import Callable, Iterable
 
-from .base import BaseGenerator
+from gensql.core.constants import DEFAULT_GENERATE_CHUNK_SIZE
 
 
-class UUIDVersion(IntEnum):
+class UUIDVersion(Enum):
     VER_4 = 4
     VER_7 = 7
 
 
-class UUIDGenerator(BaseGenerator):
+class UUIDGenerator:
     def __init__(
-        self, num_rows: int, shuffle_callback: Callable, uuid_version: int, **kwargs
+        self, uuid_version: UUIDVersion, chunk_size: int = DEFAULT_GENERATE_CHUNK_SIZE
     ):
-        super().__init__(num_rows)
-        self.num_rows = num_rows
+        self.chunk_size = chunk_size
         self.lib = ctypes.CDLL("./gensql/lib/bin/uuid.so")
         self.lib.fill_array.argtypes = [ctypes.c_int, ctypes.c_int]
         self.lib.fill_array.restype = ctypes.POINTER(ctypes.c_char_p)
-        if uuid_version == 4:
-            self.uuid_ptr = self.lib.fill_array(num_rows, UUIDVersion.VER_4)
-        elif uuid_version == 7:
-            self.uuid_ptr = self.lib.fill_array(num_rows, UUIDVersion.VER_7)
-        else:
-            raise ValueError(f"ERROR: unsupported UUID version {uuid_version}")
-        self.uuids = [self.uuid_ptr[i] for i in range(num_rows)]
+        self.lib.free_array.argtypes = [ctypes.POINTER(ctypes.c_char_p)]
+        self.lib.free_array.restype = None
+        self.uuid_version = uuid_version
+
+    def set_shuffle_callback(self, callback: dict[str, Callable]):
+        pass
+
+    def reset_indices(self):
+        pass
+
+    def generate(self, num_rows: int) -> Iterable[list]:
+        for i in range(0, num_rows, self.chunk_size):
+            chunk_size = min(self.chunk_size, num_rows - i)
+
+            yield self.generate_chunk(chunk_size)
 
     def generate_chunk(self, chunk_size: int):
-        for i in range(0, self.num_rows, chunk_size):
-            yield self.uuids[i : i + chunk_size]
+        arr_ptr = self.lib.fill_array(chunk_size, self.uuid_version.value)
+        uuids = [arr_ptr[i] for i in range(chunk_size)]
+        self.lib.free_array(arr_ptr)
+
+        return uuids
