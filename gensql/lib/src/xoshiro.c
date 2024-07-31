@@ -1,5 +1,5 @@
-#include <stdlib.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <time.h>
 
 static uint64_t s[4];
@@ -27,26 +27,26 @@ void seed_rng() {
     }
 }
 
-uint32_t *fill_array(uint32_t count, uint32_t min_value, uint32_t max_value) {
+uint32_t* fill_array(uint32_t count, uint32_t min_value, uint32_t max_value) {
     if (min_value >= max_value) {
         return NULL;
     }
 
-    uint32_t *arr = calloc(count, sizeof(uint32_t));
+    uint32_t* arr = calloc(count, sizeof(uint32_t));
     if (arr == NULL) {
         return NULL;
     }
-    
+
     uint64_t range = (uint64_t)max_value - min_value + 1;
-    
+
     for (uint32_t i = 0; i < count; i++) {
         uint64_t rand_val = next();
         arr[i] = (uint32_t)((rand_val % range) + min_value);
     }
-    
+
     return arr;
 }
 
-void free_array(uint32_t *arr) {
+void free_array(uint32_t* arr) {
     free(arr);
 }
