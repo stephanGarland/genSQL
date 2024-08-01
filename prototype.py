@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import ctypes
-import random
-from typing import TYPE_CHECKING, Generator, List
+from random import getrandbits
+from typing import TYPE_CHECKING, Generator, List, Tuple
 
 from gensql.core.db import SQLiteColumnGetter
 from gensql.core.worker import Worker
@@ -11,8 +11,7 @@ from gensql.generators.email import DomainGenerator, EmailFmt, EmailGenerator
 from gensql.generators.geo import CompositeGeoGenerator
 from gensql.generators.uuid import UUIDGenerator, UUIDVersion
 from gensql.generators.word import WordGenerator
-
-# from gensql.utils.connections import SQLiteColumnGetter
+from gensql.utils.column_reorder import ColumnReorder
 from gensql.utils.shared_epoch import SharedEpochManager
 from gensql.utils.shuffleable_bytes import ShuffleableBytes
 from gensql.utils.writer import Writer
@@ -35,6 +34,20 @@ def load_shuffler() -> ctypes.CDLL:
     return lib
 
 
+def generate_data(num_rows: int, output_file: str, desired_order: List[str]) -> None:
+    workers, original_order = setup_generators(num_rows)
+    reorderer = ColumnReorder(original_order, desired_order)
+    writer = Writer(output_file)
+    writer.start()
+
+    for chunks in make_gen(workers):
+        reordered_chunks = reorderer.reorder_chunk(chunks)
+        writer.write_chunk(reordered_chunks)
+
+    writer.end()
+    writer.join()
+
+
 def generate_chunk(
     generators: List[Worker], start_row: int, end_row: int, output_file: str
 ) -> None:
@@ -48,7 +61,7 @@ def generate_chunk(
     writer.join()
 
 
-def setup_generators(num_rows: int) -> List[Worker]:
+def setup_generators(num_rows: int) -> Tuple[List[Worker], List[str]]:
     fname_gen = WordGenerator(
         byte_list_fname, is_lower=False, chunk_size=CHUNK_SIZE, generator_name="fname"
     )
@@ -73,7 +86,9 @@ def setup_generators(num_rows: int) -> List[Worker]:
         generator_name="geo",
     )
     uuid_gen = UUIDGenerator(
-        uuid_version=UUIDVersion.VER_7, shared_epoch_manager=shared_epoch_manager
+        uuid_version=UUIDVersion.VER_7,
+        shared_epoch_manager=shared_epoch_manager,
+        chunk_size=CHUNK_SIZE,
     )
     w_fname = Worker(
         fname_gen,
@@ -94,7 +109,7 @@ def setup_generators(num_rows: int) -> List[Worker]:
         shuffle_lib=load_shuffler(),
     )
     w_dt = Worker(dt_gen, NUM_ROWS)
-    w_uuid = Worker(uuid_gen, NUM_ROWS)
+    w_uuid = Worker(uuid_gen, NUM_ROWS, CHUNK_SIZE)
 
     w_geo = Worker(
         geo_gen,
@@ -103,7 +118,15 @@ def setup_generators(num_rows: int) -> List[Worker]:
         shuffle_lib=load_shuffler(),
     )
 
-    return [w_uuid, w_dt, w_fname, w_lname, w_email, w_geo]
+    # TODO: automatically generate the string ordering based on class name
+    return [w_dt, w_uuid, w_fname, w_lname, w_email, w_geo], [
+        "datetime",
+        "uuid",
+        "fname",
+        "lname",
+        "email",
+        "geo",
+    ]
 
 
 def make_gen(funcs) -> Generator:
@@ -112,25 +135,13 @@ def make_gen(funcs) -> Generator:
         yield chunks
 
 
-def generate_data(num_rows: int, output_file: str) -> None:
-    workers = setup_generators(num_rows)
-    writer = Writer(output_file)
-    writer.start()
-
-    for chunks in make_gen(workers):
-        writer.write_chunk(chunks)
-
-    writer.end()
-    writer.join()
-
-
 if __name__ == "__main__":
     sql = SQLiteColumnGetter()
 
-    fname_seed = random.getrandbits(32)
-    lname_seed = random.getrandbits(32)
-    domain_seed = random.getrandbits(32)
-    geo_seed = random.getrandbits(32)
+    fname_seed = getrandbits(32)
+    lname_seed = getrandbits(32)
+    domain_seed = getrandbits(32)
+    geo_seed = getrandbits(32)
 
     data = sql.get_columns(["first_name"], "person_name")
     f_names = data["first_name"]
@@ -157,6 +168,7 @@ if __name__ == "__main__":
 
     shared_epoch_manager = SharedEpochManager(name="datetimes", size=NUM_ROWS)
 
-    generate_data(NUM_ROWS, OUTPUT_FILE)
+    desired_order = ["fname", "lname", "email", "uuid", "datetime", "geo"]
+    generate_data(NUM_ROWS, OUTPUT_FILE, desired_order)
 
     shared_epoch_manager.close_and_unlink()
