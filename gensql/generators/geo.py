@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from typing import (TYPE_CHECKING, Callable, Dict, Generator, Iterable, List,
-                    Optional)
+from typing import TYPE_CHECKING, Callable, Dict, Generator, Iterable, List, Optional
 
 from gensql.core.constants import DEFAULT_GENERATE_CHUNK_SIZE
 

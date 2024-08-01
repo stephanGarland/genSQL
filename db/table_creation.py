@@ -181,7 +181,7 @@ all_indices = (
 
 
 def return_rows(f, delim: str) -> list:
-    if not delim in ["\t", ","]:
+    if delim not in ["\t", ","]:
         raise ValueError(f"ERROR: delimiter {delim} not recognized")
     return [line.strip().split(delim) for line in f][1:]
 
