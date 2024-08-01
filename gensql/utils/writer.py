@@ -1,5 +1,6 @@
 from queue import Queue
 from threading import Thread
+from typing import Any, List, Tuple
 
 
 class Writer:
@@ -7,16 +8,18 @@ class Writer:
         self.filename = filename
         self.queue: Queue = Queue()
 
-    # TODO: encapsulate rows with quotes that don't break
-    def writer_func(self):
+    def writer_func(self) -> None:
         with open(self.filename, "wb") as f:
             while True:
-                chunk = self.queue.get()
+                chunk: Tuple[List[bytes], ...] = self.queue.get()
                 if chunk == "EOF":
                     break
-
+                flattened_row: List = []
                 for row in zip(*chunk):
-                    f.write(b",".join(row) + b"\n")
+                    for item in row:
+                        flattened_row.extend(item)
+                    f.write(b",".join(flattened_row) + b"\n")
+                    flattened_row.clear()
 
     def start(self):
         self.writer_thread = Thread(target=self.writer_func)

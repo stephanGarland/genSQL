@@ -246,6 +246,13 @@ with closing(conn):
             rows,
         )
 
+    with open("./content/code_city.csv", "r") as f:
+        rows = return_rows(f, ",")
+        conn.executemany(
+            "INSERT INTO city (code_country, city) VALUES (?, ?)",
+            rows,
+        )
+
     # the original zip_code.csv had some dupes, like `06340, Groton`
     with open("./content/zip_code_deduped.csv", "r") as f:
         rows = return_rows(f, ",")

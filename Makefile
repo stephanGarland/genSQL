@@ -1,8 +1,12 @@
 SHELL := /bin/bash
 
+IS_MAC := False
+
+BIN_DIR := gensql/lib/bin
+SRC_DIR := gensql/lib/src
+
 CC := gcc
 CFLAGS := -Wextra -Wall -O3 -fPIC -shared
-IS_MAC := False
 LDFLAGS := /usr/lib/x86_64-linux-gnu
 
 ifeq ($(shell uname), Darwin)
@@ -19,6 +23,8 @@ ifeq ($(shell uname), Linux)
 	@$(MAKE) check_glibc
 endif
 	@$(MAKE) build
+
+_no_print := $(shell mkdir -p $(BIN_DIR))
 
 check_glibc:
 	@GLIBC_VERSION=$$(ldd --version | awk '{IGNORECASE=1} /glibc/ {print $$NF}'); \
@@ -45,10 +51,10 @@ build:
 		echo "On Debian/Ubuntu, use: sudo apt-get install libbsd-dev"; \
 		echo "On openSUSE, use: sudo zypper install libbsd-devel"; \
 	fi
-	$(CC) $(CFLAGS) gensql/lib/src/fast_shuffle.c -o gensql/lib/bin/fast_shuffle.so
-	$(CC) $(CFLAGS) gensql/lib/src/fast_mod.c -o gensql/lib/bin/fast_mod.so
-	$(CC) $(CFLAGS) gensql/lib/src/uuid.c -L$(LDFLAGS) $(LDLIBS) -o gensql/lib/bin/uuid.so $(LDSTATICLIBS)
-	$(CC) $(CFLAGS) gensql/lib/src/xoshiro.c -o gensql/lib/bin/xoshiro.so
+	$(CC) $(CFLAGS) $(SRC_DIR)/fast_shuffle.c -o $(BIN_DIR)/fast_shuffle.so
+	$(CC) $(CFLAGS) $(SRC_DIR)/fast_mod.c -o $(BIN_DIR)/fast_mod.so
+	$(CC) $(CFLAGS) $(SRC_DIR)/uuid.c -L$(LDFLAGS) $(LDLIBS) -o $(BIN_DIR)/uuid.so $(LDSTATICLIBS)
+	$(CC) $(CFLAGS) $(SRC_DIR)/xoshiro.c -o $(BIN_DIR)/xoshiro.so
 
 clean:
-	rm -f gensql/lib/bin/**/*.so
+	rm -f $(BIN_DIR)/**/*.so

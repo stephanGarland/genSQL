@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import ctypes
 from enum import Enum
-from typing import Callable, Iterable
+from typing import Callable, Dict, Iterable, List
 
 from gensql.core.constants import DEFAULT_GENERATE_CHUNK_SIZE
+from gensql.lib.wrapper.uuid import get_lib as uuidgen
+from gensql.utils.shared_epoch import SharedEpochManager
 
 
 class UUIDVersion(Enum):
@@ -14,17 +16,17 @@ class UUIDVersion(Enum):
 
 class UUIDGenerator:
     def __init__(
-        self, uuid_version: UUIDVersion, chunk_size: int = DEFAULT_GENERATE_CHUNK_SIZE
+        self,
+        uuid_version: UUIDVersion,
+        shared_epoch_manager: SharedEpochManager,
+        chunk_size: int = DEFAULT_GENERATE_CHUNK_SIZE,
     ):
         self.chunk_size = chunk_size
-        self.lib = ctypes.CDLL("./gensql/lib/bin/uuid.so")
-        self.lib.fill_array.argtypes = [ctypes.c_int, ctypes.c_int]
-        self.lib.fill_array.restype = ctypes.POINTER(ctypes.c_char_p)
-        self.lib.free_array.argtypes = [ctypes.POINTER(ctypes.c_char_p)]
-        self.lib.free_array.restype = None
+        self.shared_epoch_manager = shared_epoch_manager
+        self.uuidgen = uuidgen()
         self.uuid_version = uuid_version
 
-    def set_shuffle_callback(self, callback: dict[str, Callable]):
+    def set_shuffle_callback(self, callback: Dict[str, Callable]):
         pass
 
     def reset_indices(self):
@@ -37,8 +39,16 @@ class UUIDGenerator:
             yield self.generate_chunk(chunk_size)
 
     def generate_chunk(self, chunk_size: int):
-        arr_ptr = self.lib.fill_array(chunk_size, self.uuid_version.value)
-        uuids = [arr_ptr[i] for i in range(chunk_size)]
-        self.lib.free_array(arr_ptr)
+        epoch_count = self.shared_epoch_manager.size
+        arr_ptr = self.uuidgen.fill_array(
+            chunk_size, self.uuid_version.value, b"/datetimes", epoch_count
+        )
+
+        uuid_array = ctypes.cast(
+            arr_ptr, ctypes.POINTER(ctypes.c_char * (37 * chunk_size))
+        )
+        uuids: List[List[bytes]] = [
+            (uuid_array.contents[i * 37 : (i + 1) * 37],) for i in range(chunk_size)
+        ]
 
         return uuids

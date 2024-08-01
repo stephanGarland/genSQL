@@ -1,72 +1,81 @@
-from collections import deque
-from math import ceil
-from random import shuffle
+from __future__ import annotations
 
-from gensql.utils import utilities
-from gensql.utils.constants import (MAX_PHONE_NUMBER, MIN_PHONE_NUMBER,
-                                    PHONE_NUMBERS)
+from typing import (TYPE_CHECKING, Callable, Dict, Generator, Iterable, List,
+                    Optional)
 
-from .base import BaseGenerator
+from gensql.core.constants import DEFAULT_GENERATE_CHUNK_SIZE
+
+if TYPE_CHECKING:
+    from gensql.utils.shuffleable_bytes import ShuffleableBytes
 
 
-class Geo(BaseGenerator):
-    def __init__(self, num_rows: int, country: str):
-        super().__init__(num_rows)
-        self.allocator = utilities.Allocator
-        self.country = country
-        q1 = f"""SELECT c.city, c.country FROM city c WHERE c.country = '{self.country}'"""
-        self.cursor.execute(q1)
-        cc = self.cursor.fetchall()
-        self.city, self.country = zip(*cc)
-        # only return countries with a matching city
-        q2 = """SELECT DISTINCT cc.code, c.country FROM country cc JOIN city c ON c.country = cc.country"""
-        self.cursor.execute(q2)
-        result = self.cursor.fetchall()
-        self.cc_map = {v: k.lower() for k, v in result}
-        self._prepare_city()
-        self._prepare_country()
-        self._prepare_phone_allocator()
-        self.conn.close()
+class GeoGenerator:
+    def __init__(
+        self,
+        byte_list: ShuffleableBytes,
+        chunk_size: int = DEFAULT_GENERATE_CHUNK_SIZE,
+        generator_name: str = "default",
+    ):
+        self.byte_list = byte_list
+        self.chunk_size = chunk_size
+        self.shuffle_callback: Optional[Dict[str, Callable]] = None
+        self.generator_name = generator_name
 
-    def _prepare_city(self):
-        num_needed = ceil(self.num_rows / len(self.city))
-        self.city = self.city * num_needed
+    def set_shuffle_callback(self, callback: Dict[str, Callable]):
+        self.shuffle_callback = callback
 
-    def _prepare_country(self):
-        num_needed = ceil(self.num_rows / len(self.country))
-        self.country = self.country * num_needed
+    def generate(self, num_rows: int) -> Iterable[List[bytes]]:
+        for i in range(0, num_rows, self.chunk_size):
+            chunk_size = min(self.chunk_size, num_rows - i)
+            yield self.generate_chunk(chunk_size)
 
-    def _prepare_phone_allocator(self):
-        deques_needed = ceil(self.num_rows / (MAX_PHONE_NUMBER - MIN_PHONE_NUMBER) * 2)
-        self.random_phone = self.allocator(
-            MIN_PHONE_NUMBER, MAX_PHONE_NUMBER, ranged_arr=True, shuffle=True
-        )
-        if deques_needed > 1:
-            for _ in range(deques_needed):
-                self.random_phone.ids += self.allocator(
-                    MIN_PHONE_NUMBER,
-                    MAX_PHONE_NUMBER,
-                    ranged_arr=True,
-                    shuffle=True,
-                ).ids
+    def generate_chunk(self, chunk_size: int) -> List[bytes]:
+        if self.shuffle_callback:
+            self.shuffle_callback[self.generator_name](self.byte_list.indices)
+        geo_chunk: List[bytes] = []
+        i = 0
+        for _ in range(chunk_size):
+            try:
+                geo = self.byte_list.bytelist[self.byte_list.indices[i]]
+                geo_chunk.append(geo)
+                i += 1
+            except IndexError as exc:
+                i = 0
+                if self.shuffle_callback:
+                    self.shuffle_callback[self.generator_name](self.byte_list.indices)
+                else:
+                    raise exc
+                geo = self.byte_list.bytelist[self.byte_list.indices[i]]
+                geo_chunk.append(geo)
+        return geo_chunk
 
-    def make_city(self, *args):
-        for i in range(0, self.num_rows, self.chunk_size):
-            yield deque(self.city[i : i + self.chunk_size])
+    def reset_indices(self):
+        self.byte_list.reset_indices()
 
-    def make_country(self, *args):
-        for i in range(0, self.num_rows, self.chunk_size):
-            yield deque(self.country[i : i + self.chunk_size])
 
-    def make_phone(self, *args) -> deque:
-        for i in range(0, self.num_rows, self.chunk_size):
-            phones = deque()
-            for _ in range(self.chunk_size):
-                country = "".join(args[0])
-                phone_val_1 = self.random_phone.allocate()
-                phone_val_2 = self.random_phone.allocate()
-                phone_str = f"{phone_val_1}{phone_val_2}"
-                phone = PHONE_NUMBERS.get(self.cc_map[country], lambda x: x)(phone_str)
-                phones.append(phone)
+class CompositeGeoGenerator:
+    def __init__(
+        self,
+        byte_lists: List[ShuffleableBytes],
+        chunk_size: int = DEFAULT_GENERATE_CHUNK_SIZE,
+        generator_name: str = "composite_geo",
+    ):
+        self.generators = [
+            GeoGenerator(ba, chunk_size, f"{generator_name}_{i}")
+            for i, ba in enumerate(byte_lists)
+        ]
+        self.chunk_size = chunk_size
+        self.generator_name = generator_name
 
-            yield phones
+    def set_shuffle_callback(self, callback: Dict[str, Callable]):
+        for gen in self.generators:
+            gen.set_shuffle_callback(callback)
+
+    def generate(self, num_rows: int) -> Generator:
+        generator_iterables = [gen.generate(num_rows) for gen in self.generators]
+        for chunks in zip(*generator_iterables):
+            yield list(zip(*chunks))
+
+    def reset_indices(self):
+        for gen in self.generators:
+            gen.reset_indices()

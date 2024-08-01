@@ -1,5 +1,12 @@
 import random
 from math import floor
+from pathlib import PurePath
+from typing import Dict, List, Union
+
+
+def get_abs_path_to_so(file_path: str) -> str:
+    _path = PurePath(file_path)
+    return f"{_path.parent.parent}/bin/{_path.stem}.so"
 
 
 def sample(iterable: list, num_rows: int, num_samples: int = 1) -> list[str] | str:
@@ -12,14 +19,16 @@ def sample(iterable: list, num_rows: int, num_samples: int = 1) -> list[str] | s
     return sample_list
 
 
-def lowercase_schema(schema: dict) -> dict:
+def lowercase_schema(
+    schema: Union[Dict[str, str], str],
+) -> Union[Dict[str, str], List[str], str]:
     """
     Allows input schemas to be correctly parsed if uppercase
     letters are used (e.g. NULL as a default) without doing repeated
     lower() calls during row creation.
     """
     if isinstance(schema, dict):
-        return {k.lower(): lowercase_schema(v) for k, v in schema.items()}
+        return {k.lower(): lowercase_schema(v) for k, v in schema.items()}  # type: ignore
     elif isinstance(schema, list):
         return [lowercase_schema(v) for v in schema]
     elif isinstance(schema, str):

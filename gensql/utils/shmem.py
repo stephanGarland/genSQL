@@ -1,10 +1,9 @@
 import ctypes
-from collections import defaultdict, deque
 from multiprocessing.shared_memory import ShareableList
 
 
 class ShMemList:
-    __slots__ = ["indices", "seeds", "shmem", "len_shmem"]
+    __slots__ = ["indices", "shmem", "len_shmem"]
 
     def __init__(self, shmem_name: str, create: bool = False, sequence: list = list()):
         if create:
@@ -15,4 +14,9 @@ class ShMemList:
         self.indices = (ctypes.c_uint32 * self.len_shmem)(
             *(list(range(self.len_shmem)))
         )
-        self.seeds: defaultdict = defaultdict(deque)
+
+    def close(self):
+        self.shmem.shm.close()
+
+    def unlink(self):
+        self.shmem.shm.unlink()
