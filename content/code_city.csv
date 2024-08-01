@@ -1,4 +1,4 @@
-code,city
+code_country,city
 AD,Andorra La Vella
 AD,Escaldes
 AE,Abu Dhabi
@@ -25,6 +25,9 @@ AO,Benguela
 AO,Luanda
 AO,Lubango
 AO,Sumbe
+AQ,McMurdo Station
+AQ,Molodesjnaja
+AQ,Reading
 AR,Bahia Blanca
 AR,Bariloche
 AR,Berazategui
@@ -86,15 +89,15 @@ AT,Bad Vöslau
 AT,Baden
 AT,Bodensdorf
 AT,Bregenz
-AT,Döbriach
 AT,Dornbirn
+AT,Döbriach
 AT,Ebreichsdorf
 AT,Eisenstadt
 AT,Feldkirchen
-AT,Gänserndorf
-AT,Götzis
 AT,Grafenbach
 AT,Graz
+AT,Gänserndorf
+AT,Götzis
 AT,Güssing
 AT,Hagenberg
 AT,Hohenems
@@ -457,9 +460,9 @@ BE,Ottignies
 BE,Oudenaarde
 BE,Overijse
 BE,Peer
-BE,Péruwelz
 BE,Pittem
 BE,Puurs
+BE,Péruwelz
 BE,Reet
 BE,Rhisnes
 BE,Sint-Margriete-Houtem
@@ -511,55 +514,21 @@ BJ,Porto-Novo
 BM,Hamilton
 BM,Saint George
 BM,Somerset
-BO,Aiquile
-BO,Apolo
-BO,Atocha
-BO,Bermejo
-BO,Caracollo
-BO,Charaña
-BO,Chimore
-BO,Chulumani
-BO,Cochabamba
-BO,Corioco
-BO,Cotoca
-BO,Guayaramerin
-BO,La Paz
-BO,Lagunillas
-BO,Machacamarca
-BO,Mizque
-BO,Oruro
-BO,Portachuelo
-BO,Potosi
-BO,Puerto Grether
-BO,Puerto Patino
-BO,Puerto Villarroel
-BO,Punata
-BO,Riberalta
-BO,San Borja
-BO,San Jose de Chiquitos
-BO,Santa Ana
-BO,Santa Cruz
-BO,Santa Rosa del Sara
-BO,Sucre
-BO,Tarija
-BO,Trinidad
-BO,Tupiza
-BO,Uyuni
-BO,Villazon
-BO,Vinto
-BO,Yacuiba
-BO,Yolosa
+BN,Bandar Seri Begawan
+BN,Jerudong
+BN,Kuala Belait
+BN,Tutong
 BR,Aguas de Lindóia
 BR,Aracaju
-BR,Araçatuba
 BR,Araraquara
+BR,Araçatuba
 BR,Bage
 BR,Barbacena
 BR,Barra do Corda
 BR,Barreiras
 BR,Bauru
-BR,Belém
 BR,Belo Horizonte
+BR,Belém
 BR,Bertioga
 BR,Boa Vista
 BR,Bragança Paulista
@@ -594,8 +563,8 @@ BR,Itamogi
 BR,Itanhaém
 BR,Itapetinga
 BR,Itatiba
-BR,João Pessoa
 BR,Joinville
+BR,João Pessoa
 BR,Juiz de For a
 BR,Jundiai
 BR,Limeira
@@ -634,12 +603,16 @@ BR,Ribeirão Preto
 BR,Rio Branco
 BR,Rio de Janeiro
 BR,Salvador
-BR,Santa Cruz do Sul
 BR,Santa Cruz
+BR,Santa Cruz do Sul
 BR,Santarém
 BR,Santo Andre
 BR,Santo Ângelo
 BR,Santos
+BR,Sao Miguel dos Campos
+BR,Sete Lagoas
+BR,Sobral
+BR,Sorocaba
 BR,São Bernardo do Campo
 BR,São Caetano do Sul
 BR,São Carlos
@@ -649,14 +622,10 @@ BR,São José dos Campos
 BR,São José dos Pinhais
 BR,São Leopoldo
 BR,São Luís
-BR,Sao Miguel dos Campos
 BR,São Paulo
-BR,São Sebastião do Paraíso
 BR,São Sebastião
+BR,São Sebastião do Paraíso
 BR,São Vicente
-BR,Sete Lagoas
-BR,Sobral
-BR,Sorocaba
 BR,Tangará da Serra
 BR,Taquarituba
 BR,Taubate
@@ -670,8 +639,8 @@ BR,Uberaba
 BR,Uberlândia
 BR,União da Vitória
 BR,Valinhos
-BR,Viçosa
 BR,Vitória
+BR,Viçosa
 BR,Volta Redonda
 BS,Abraham's Bay
 BS,Behring Point
@@ -684,8 +653,8 @@ BS,Fresh Creek
 BS,Georgetown
 BS,Marsh Harbour
 BS,Matthew Town
-BS,Nassau City
 BS,Nassau
+BS,Nassau City
 BS,Old Bight
 BS,Port Nelson
 BS,Rock Sound
@@ -697,8 +666,8 @@ BY,Brest
 BY,Mahilyow
 BY,Minsk
 BY,Molodechno
-BZ,Belize City
 BZ,Belize
+BZ,Belize City
 BZ,Belmopan
 BZ,Orange Walk
 BZ,Punta Gorda
@@ -769,8 +738,8 @@ CA,Busby
 CA,Calabogie
 CA,Caledon
 CA,Calgary
-CA,Cambridge Bay
 CA,Cambridge
+CA,Cambridge Bay
 CA,Campbell River
 CA,Campbellford
 CA,Campbellton
@@ -973,7 +942,6 @@ CA,Legal
 CA,Lennoxville
 CA,Les Méchins
 CA,Lethbridge
-CA,Lévis
 CA,Lillooet
 CA,Lindsay
 CA,Listowel
@@ -984,6 +952,7 @@ CA,Longueuil
 CA,Lower Sackville
 CA,Lumby
 CA,Lynn Lake
+CA,Lévis
 CA,Macamic
 CA,Mackey
 CA,Madoc
@@ -1111,8 +1080,8 @@ CA,Renfrew
 CA,Revelstoke
 CA,Rexdale
 CA,Richibucto
-CA,Richmond Hill
 CA,Richmond
+CA,Richmond Hill
 CA,Rimouski
 CA,Riverview
 CA,Riviere-du-Loup
@@ -1136,10 +1105,10 @@ CA,Saint-Donat-de-Montcalm
 CA,Saint-Eustache
 CA,Saint-Hippolyte-de-Kilkenny
 CA,Saint-Hubert
-CA,Saint-Jérôme
 CA,Saint-Joseph-de-Sorel
 CA,Saint-Jovite
 CA,Saint-Jude
+CA,Saint-Jérôme
 CA,Saint-Lambert
 CA,Saint-Laurent
 CA,Saint-Lazare
@@ -1147,8 +1116,8 @@ CA,Saint-Louis
 CA,Saint-Marcel
 CA,Saint-Ours
 CA,Saint-Pascal
-CA,Saint-Rémi
 CA,Saint-Robert
+CA,Saint-Rémi
 CA,Sainte-Foy
 CA,Sainte-Julie
 CA,Sainte-Victoire
@@ -1303,9 +1272,9 @@ CH,Bienne
 CH,Bremgarten
 CH,Brugg
 CH,Buchs
-CH,Bülach
 CH,Bulle
 CH,Burgdorf
+CH,Bülach
 CH,Chiasso
 CH,Chur
 CH,Cugy
@@ -1363,8 +1332,6 @@ CH,Yverdon
 CH,Zofingen
 CH,Zug
 CH,Zurich
-CI,Abidjan
-CI,Yamoussoukro
 CK,Avarua
 CK,Rarotonga
 CL,Antofagasta
@@ -1426,8 +1393,8 @@ CL,San Joaquin
 CL,San Miguel
 CL,San Pedro
 CL,San Ramon
-CL,San Vicente De Tagua Tagua
 CL,San Vicente
+CL,San Vicente De Tagua Tagua
 CL,Santiago
 CL,Talca
 CL,Temuco
@@ -1435,8 +1402,8 @@ CL,Valdivia
 CL,Vallenar
 CL,Valparaiso
 CL,Victoria
-CL,Viña Del Mar
 CL,Vitacura
+CL,Viña Del Mar
 CM,Douala
 CM,Limbe
 CM,Mankon Bamenda
@@ -1473,8 +1440,8 @@ CN,Chabgling
 CN,Changbai
 CN,Changchun
 CN,Changde
-CN,Changhua City
 CN,Changhua
+CN,Changhua City
 CN,Changsha
 CN,Changshu
 CN,Changting
@@ -1541,8 +1508,8 @@ CN,Guiping
 CN,Gushi
 CN,Hailar
 CN,Hails
-CN,Haiyang Dao
 CN,Haiyang
+CN,Haiyang Dao
 CN,Haliut
 CN,Hami
 CN,Hangzhou
@@ -1556,8 +1523,8 @@ CN,Hezuo
 CN,Hoboksar
 CN,Hotan
 CN,Hsin Tien
-CN,Hsin-Chu County
 CN,Hsin-Chu
+CN,Hsin-Chu County
 CN,Hsintien City
 CN,Hua Shan
 CN,Hua-Lien City
@@ -1663,8 +1630,8 @@ CN,NanTong
 CN,Nancheng
 CN,Nanchong
 CN,Nanhai
-CN,Nanjing Jiangsu
 CN,Nanjing
+CN,Nanjing Jiangsu
 CN,Nanning
 CN,Nanping
 CN,Nantou County
@@ -1932,11 +1899,11 @@ CR,Jaco
 CR,Liberia
 CR,Playas del Coco
 CR,Quesada
-CR,Sámara
 CR,San Francisco De Dos Rios
 CR,San Jose
 CR,San Ramon
 CR,Santa Maria
+CR,Sámara
 CR,Tibas
 CR,Turrialba
 CU,Havana
@@ -1949,45 +1916,6 @@ CY,Larnaca
 CY,Limassol
 CY,Nicosia
 CY,Paphos
-CZ,Blansko
-CZ,Brno
-CZ,Ceske Budejovice
-CZ,Cheb
-CZ,Chocen
-CZ,Chomutov
-CZ,Decin
-CZ,Frydek-Mistek
-CZ,Hradec Kralove
-CZ,Jablonec nad Nisou
-CZ,Jicin
-CZ,Jihlava
-CZ,Karlovy Vary
-CZ,Kladno
-CZ,Klatovy
-CZ,Kralupy Nad Vltavou
-CZ,Krnov
-CZ,Lankroun
-CZ,Liberec
-CZ,Mlada Boleslav
-CZ,Most
-CZ,Náchod
-CZ,Obecnice
-CZ,Olomouc
-CZ,Opava
-CZ,Ostrava
-CZ,Pardubice
-CZ,Plzen
-CZ,Prague
-CZ,Pribram
-CZ,Semily
-CZ,Stod
-CZ,Tábor
-CZ,Teplice
-CZ,Uhersky Brod
-CZ,Usti nad Labem
-CZ,Zamberk
-CZ,Zlin
-CZ,Znojmo
 DE,Aachen
 DE,Aalen
 DE,Ahaus
@@ -2057,8 +1985,8 @@ DE,Dormagen
 DE,Dortmund
 DE,Dresden
 DE,Duisburg
-DE,Dülmen
 DE,Dusseldorf
+DE,Dülmen
 DE,Eberbach
 DE,Echzell
 DE,Egelsbach
@@ -2086,9 +2014,9 @@ DE,Friedrichshafen
 DE,Friolzheim
 DE,Fuerth
 DE,Fulda
-DE,Fürstenberg
 DE,Furth Im Wald
 DE,Fussen
+DE,Fürstenberg
 DE,Gaienhofen
 DE,Garbsen
 DE,Gedern
@@ -2103,13 +2031,13 @@ DE,Gladenbach
 DE,Gluckstadt
 DE,Gotha
 DE,Gottelfingen
-DE,Göttingen
 DE,Greifswald
 DE,Griesheim
 DE,Gross-Zimmern
 DE,Grunstadt
 DE,Guetersloh
 DE,Gunzenhausen
+DE,Göttingen
 DE,Haan
 DE,Hachenburg
 DE,Hagen
@@ -2203,12 +2131,12 @@ DE,Meschede
 DE,Meßstetten
 DE,Minden
 DE,Moers
-DE,Mönchengladbach
 DE,Montabaur
 DE,Morzheim
 DE,Muellheim
 DE,Munich
 DE,Munster
+DE,Mönchengladbach
 DE,Neu Ulm
 DE,Neu-Isenburg
 DE,Neubrandenburg
@@ -2216,8 +2144,8 @@ DE,Neuburg
 DE,Neuenbürg
 DE,Neumarkt
 DE,Neuss
-DE,Neustadt An Der Waldnaab
 DE,Neustadt
+DE,Neustadt An Der Waldnaab
 DE,Neustrelitz
 DE,Neuwied
 DE,Nidda
@@ -2377,8 +2305,8 @@ DK,Hjørring
 DK,Hobro
 DK,Holbaek
 DK,Horsens
-DK,Hørsholm
 DK,Humlebaek
+DK,Hørsholm
 DK,Jelling
 DK,Karup
 DK,Kastrup
@@ -2393,9 +2321,9 @@ DK,Lyngby
 DK,Mygind
 DK,Naestved
 DK,Nordbørg
+DK,Nyborg
 DK,Nørre Alslev
 DK,Nørresundby
-DK,Nyborg
 DK,Odder
 DK,Odense
 DK,Olstykke
@@ -2406,9 +2334,9 @@ DK,Ringe
 DK,Ringkobing
 DK,Ringsted
 DK,Rodding
-DK,Rødovre
 DK,Roenne
 DK,Roskilde
+DK,Rødovre
 DK,Saltum
 DK,Selde
 DK,Silkeborg
@@ -2440,8 +2368,8 @@ DK,Vonge
 DM,Marigot
 DM,Roseau
 DO,Arenoso
-DO,Azua De Compostela
 DO,Azua
+DO,Azua De Compostela
 DO,Bahoruco
 DO,Bajos De Haina
 DO,Bani
@@ -2483,8 +2411,8 @@ DO,Fundacion
 DO,Galvan
 DO,Gaspar Hernandez
 DO,Guayabal
-DO,Hato Mayor Del Rey
 DO,Hato Mayor
+DO,Hato Mayor Del Rey
 DO,Higuey
 DO,Hondo Valle
 DO,Hostos
@@ -2504,8 +2432,8 @@ DO,Laguna Salada
 DO,Las Charcas
 DO,Las Cuevas
 DO,Las Guaranas
-DO,Las Matas De Farfan
 DO,Las Matas
+DO,Las Matas De Farfan
 DO,Las Salinas
 DO,Las Terrenas
 DO,Loma De Cabrera
@@ -2562,8 +2490,8 @@ DO,San Juan
 DO,San Rafael Del Yuma
 DO,San Victor
 DO,Sanchez
-DO,Santiago Rodriguez
 DO,Santiago
+DO,Santiago Rodriguez
 DO,Santo Domingo
 DO,Sosúa
 DO,Tabara Arriba
@@ -2588,8 +2516,8 @@ DZ,Oran
 DZ,Ouled Djellal
 DZ,Skikda
 EC,Ambato
-EC,Bahia De Caraquez
 EC,Bahia
+EC,Bahia De Caraquez
 EC,Cuenca
 EC,Guaranda
 EC,Guayaquil
@@ -2605,8 +2533,8 @@ EC,Puerto Baquerizo Moreno
 EC,Quito
 EC,Riobamba
 EC,San Jacinto
-EC,Santo Domingo De Los Colorados
 EC,Santo Domingo
+EC,Santo Domingo De Los Colorados
 EC,Tulcan
 EE,Jôgeva
 EE,Kuressaare
@@ -2663,9 +2591,9 @@ ES,Cartagena
 ES,Castellón De la Plana
 ES,Ciudadela
 ES,Colmenar de Oreja
-ES,Córdoba
 ES,Crespia
 ES,Cuenca
+ES,Córdoba
 ES,Daganzo de Arriba
 ES,El Prat De Llobregat
 ES,El Puerto De Santa Maria
@@ -2683,8 +2611,8 @@ ES,Igualada
 ES,Jaen
 ES,Jerez de la Frontera
 ES,La Seu d'Urgell
-ES,Las Palmas de Gran Canaria
 ES,Las Palmas
+ES,Las Palmas de Gran Canaria
 ES,Leon
 ES,Lleida
 ES,Logroño
@@ -2699,10 +2627,10 @@ ES,Marbella
 ES,Matadepera
 ES,Mataro
 ES,Mazarron
-ES,Mérida
 ES,Mollerusa
 ES,Mostoles
 ES,Murcia
+ES,Mérida
 ES,Navia
 ES,Orihuela
 ES,Oropesa
@@ -2758,11 +2686,11 @@ ET,Axum
 FI,Alajarvi
 FI,Espoo
 FI,Forssa
-FI,Hämeenlinna
 FI,Hanko
 FI,Heinola
 FI,Helsinki
 FI,Hyvinkäa
+FI,Hämeenlinna
 FI,Iisalmi
 FI,Imatra
 FI,Jakobstad
@@ -2785,14 +2713,14 @@ FI,Lappeenranta
 FI,Lapua
 FI,Lohja
 FI,Loviisa
-FI,Mäntta
 FI,Mariehamn
 FI,Mikkeli
+FI,Mäntta
 FI,Naantali
-FI,Närpio
 FI,Nilsia
 FI,Nokia
 FI,Nummela
+FI,Närpio
 FI,Orimattila
 FI,Oulu
 FI,Paimio
@@ -2861,7 +2789,6 @@ FR,Cannes
 FR,Carcassonne
 FR,Cavaliere Sur Mer
 FR,Cergy-Pontoise
-FR,Châlons
 FR,Chambery
 FR,Chambolle-Musigny
 FR,Chamonix
@@ -2869,6 +2796,7 @@ FR,Chantilly
 FR,Charenton-le-Pont
 FR,Chavaniac
 FR,Cherbourg
+FR,Châlons
 FR,Clermont-Ferrand
 FR,Clichy
 FR,Coex
@@ -2932,7 +2860,6 @@ FR,Maisons-Laffitte
 FR,Marcq-En-Baroeul
 FR,Marseille
 FR,Martigues
-FR,Mérignac
 FR,Metz
 FR,Meylan
 FR,Mimizan
@@ -2945,6 +2872,7 @@ FR,Montpellier
 FR,Morez
 FR,Mulhouse
 FR,Mutzig
+FR,Mérignac
 FR,Nancy
 FR,Nanterre
 FR,Nantes
@@ -3062,8 +2990,8 @@ GB,Broomfield
 GB,Burgess Hill
 GB,Burnley
 GB,Burton Upon Tren
-GB,Bury St Edmunds
 GB,Bury
+GB,Bury St Edmunds
 GB,Camberley
 GB,Cambridge
 GB,Canterbury
@@ -3225,8 +3153,8 @@ GB,Motherwell
 GB,Nantwich
 GB,Newark
 GB,Newbury
-GB,Newcastle Upon Tyne
 GB,Newcastle
+GB,Newcastle Upon Tyne
 GB,Newport
 GB,Newquay
 GB,Northallerton
@@ -3352,6 +3280,7 @@ GE,P'ot'I
 GE,T'elavi
 GE,Tbilisi
 GF,Cayenne
+GG,Saint Peter Port
 GH,Accra
 GH,Bolgatanga
 GH,Cape Coast
@@ -3542,15 +3471,15 @@ HU,Mako
 HU,Miskolc
 HU,Nagykoros
 HU,Nyíregyháza
-HU,Pászto
 HU,Pecs
+HU,Pászto
 HU,Siofok
 HU,Sopron
 HU,Szeged
-HU,Székesfehérvár
 HU,Szekszard
 HU,Szolnok
 HU,Szombathely
+HU,Székesfehérvár
 HU,Zalaegerszeg
 ID,Bali
 ID,Balikpapan
@@ -3884,8 +3813,8 @@ IN,Gauhati
 IN,Gaya
 IN,Ghaziabad
 IN,Ghazipur
-IN,Goa Velha
 IN,Goa
+IN,Goa Velha
 IN,Godhra
 IN,Gohana
 IN,Gondiya
@@ -4245,8 +4174,8 @@ IN,Vandavasi
 IN,Vapi
 IN,Varanasi
 IN,Vasai
-IN,Vasco da Gama
 IN,Vasco
+IN,Vasco da Gama
 IN,Vatakara
 IN,Vellore
 IN,Vidisha
@@ -4267,25 +4196,6 @@ IQ,Baghdad
 IQ,Basra
 IQ,Fallujah
 IQ,Nineveh
-IR,Ahvaz
-IR,Arak
-IR,Baharestan
-IR,Behshahr
-IR,Damghan
-IR,Fasa
-IR,Jahrom
-IR,Karaj
-IR,Kermanshah
-IR,Kish
-IR,Lar
-IR,Mashhad
-IR,Orumiyeh
-IR,Rafsanjan
-IR,Sari
-IR,Shiraz
-IR,Tabriz
-IR,Tehran
-IR,Zahedan
 IS,Akureyri
 IS,Egilsstadir
 IS,Hafnarfjörður
@@ -4517,6 +4427,7 @@ IT,Vigevano
 IT,Vimercate
 IT,Viterbo
 IT,Voghera
+JE,St Helier
 JM,Adelphi
 JM,Amity Hall
 JM,Anchovy
@@ -4935,7 +4846,6 @@ KZ,Oral
 KZ,Pavlodar
 KZ,Semipalatinsk
 KZ,Zhambyl
-LA,Vientiane
 LB,Amioun
 LB,Ashrafieh
 LB,Beirut
@@ -5100,8 +5010,6 @@ MA,Tangier
 MA,Tetouan
 MC,Monaco
 MC,Monte-Carlo
-MD,Chisinau
-MD,Tiraspol
 MG,Antananarivo
 MG,Madagascar
 MG,Nosy-Be
@@ -5113,9 +5021,6 @@ ML,Gao
 ML,Mopti
 ML,Tessalit
 ML,Tombouctou
-MM,Moulmein
-MM,Taunggyi
-MM,Yangon
 MN,Altai
 MN,Bulgan
 MN,Choibalsan
@@ -5240,7 +5145,6 @@ MX,Manzanillo
 MX,Matamoros
 MX,Matehuala
 MX,Mazatlan
-MX,Mérida
 MX,Metepec
 MX,Mexicali
 MX,Mexico
@@ -5249,6 +5153,7 @@ MX,Monterrey
 MX,Morelia
 MX,Morelos
 MX,Mulege
+MX,Mérida
 MX,Nacozari De Garcia
 MX,Naucalpan
 MX,Navojoa
@@ -5635,9 +5540,9 @@ NO,Fagernes
 NO,Farsund
 NO,Flekkefjord
 NO,Flisa
-NO,Førde
 NO,Fredrikstad
 NO,Frogner
+NO,Førde
 NO,Gjerdrum
 NO,Gjovik
 NO,Grimstad
@@ -5646,9 +5551,9 @@ NO,Hamar
 NO,Hammerfest
 NO,Harstad
 NO,Haugesund
-NO,Hønefoss
 NO,Horten
 NO,Hvittingfoss
+NO,Hønefoss
 NO,Isfjorden
 NO,Jessheim
 NO,Jevnaker
@@ -5663,8 +5568,8 @@ NO,Larvik
 NO,Levanger
 NO,Lillehammer
 NO,Lillestrøm
-NO,Mo i Rana
 NO,Mo
+NO,Mo i Rana
 NO,Moelv
 NO,Molde
 NO,Mosjoen
@@ -5689,7 +5594,6 @@ NO,Skjeberg
 NO,Slemmestad
 NO,Sogndal
 NO,Son
-NO,Sørreisa
 NO,Sortland
 NO,Stavanger
 NO,Steinkjer
@@ -5700,11 +5604,12 @@ NO,Sunndal
 NO,Sunndalsora
 NO,Svelvik
 NO,Svolvaer
-NO,Tønsberg
+NO,Sørreisa
 NO,Tromso
 NO,Trondheim
 NO,Tvedestrand
 NO,Tynset
+NO,Tønsberg
 NO,Vadso
 NO,Verdalsoren
 NO,Volda
@@ -5834,8 +5739,8 @@ PH,Bacolod
 PH,Baguio
 PH,Batangas
 PH,Butuan City
-PH,Cagayan De Oro
 PH,Cagayan
+PH,Cagayan De Oro
 PH,Cainta
 PH,Camiling
 PH,Canlubang
@@ -5868,8 +5773,8 @@ PH,Pasig
 PH,Pateros
 PH,Puerto Galera
 PH,Puerto Princesa
-PH,Quezon City
 PH,Quezon
+PH,Quezon City
 PH,Roxas
 PH,San Fernando
 PH,San Juan
@@ -6060,6 +5965,8 @@ PY,Villa Elisa
 QA,Al Wakra
 QA,Al-Rayyan
 QA,Doha
+RE,Saint Paul
+RE,Saint-Denis
 RO,Arad
 RO,Bacau
 RO,Baia Mare
@@ -6088,106 +5995,6 @@ RO,Timisoara
 RO,Tirgu Mures
 RO,Tulcea
 RO,Turda
-RU,Akademgorodok
-RU,Apatity
-RU,Archangelsk
-RU,Artem
-RU,Astrakhan
-RU,Azov
-RU,Barnaul
-RU,Birobidzhan
-RU,Biysk
-RU,Borovichi
-RU,Budennovsk
-RU,Chelyabinsk
-RU,Cherepovets
-RU,Chita
-RU,Chukchi
-RU,Derbent
-RU,Dikson
-RU,Dmitrov
-RU,Dubna
-RU,Ekaterinburg
-RU,Georgievsk
-RU,Irkutsk
-RU,Ishim
-RU,Ivanovo
-RU,Izhevsk
-RU,Kaliningrad
-RU,Kazan
-RU,Kemerovo
-RU,Khabarovsk
-RU,Kislovodsk
-RU,Konakovo
-RU,Kotlas
-RU,Krasnodar
-RU,Krasnogorsk
-RU,Krasnoyarsk
-RU,Krestsy
-RU,Kyakhta
-RU,Lermontov
-RU,Lomonosov
-RU,Makhachkala
-RU,Mineral'nyye Vody
-RU,Moscow
-RU,Murmansk
-RU,Naberezhnye Chelny
-RU,Nakhodka
-RU,Nal'chik
-RU,Nizhniy Novgorod
-RU,Novgorod
-RU,Novopavlovsk
-RU,Novorossiisk
-RU,Novosibirsk
-RU,Obninsk
-RU,Okha
-RU,Omsk
-RU,Orenburg
-RU,Palatka
-RU,Penza
-RU,Pereslavl'-Zalesskiy
-RU,Perm
-RU,Petrozavodsk
-RU,Provideniya
-RU,Pryazha
-RU,Pushkin
-RU,Pushkino
-RU,Pyatigorsk
-RU,Raduznyj
-RU,Rostov-On-Don
-RU,Rubtsovsk
-RU,Rybinsk
-RU,Saint Petersburg
-RU,Saratov
-RU,Sarov
-RU,Serpukhov
-RU,Smolensk
-RU,Sochi
-RU,Sovetskaya Gavan
-RU,Sredneural'sk
-RU,Staraya Russa
-RU,Surgut
-RU,Syktyvkar
-RU,Taldom
-RU,Tambov
-RU,Tikhvin
-RU,Togliatti
-RU,Tomsk
-RU,Trekhgorny
-RU,Troitsk
-RU,Tynda
-RU,Ufa
-RU,Uglegorsk
-RU,Ulan-Ude
-RU,Vladikavkaz
-RU,Vladivostok
-RU,Volgograd
-RU,Votkinsk
-RU,Vyborg
-RU,Yakutsk
-RU,Yoshkar-Ola
-RU,Zelenograd
-RU,Zheleznogorsk
 RW,Kigali
 SA,Abha
 SA,Al Khobar
@@ -6216,25 +6023,25 @@ SE,Alvesta
 SE,Amål
 SE,Angelholm
 SE,Arboga
-SE,Arjäng
 SE,Arjeplog
+SE,Arjäng
 SE,Arvidsjaur
 SE,Arvika
 SE,Avesta
-SE,Bålsta
 SE,Bankeryd
 SE,Barsebäck
-SE,Båstad
+SE,Bjuröklubb
 SE,Bjärred
 SE,Bjärsjölagård
 SE,Bjästa
-SE,Bjuröklubb
 SE,Boden
+SE,Borlänge
 SE,Boränget
 SE,Borås
-SE,Borlänge
 SE,Botkyrka
 SE,Bräcke
+SE,Bålsta
+SE,Båstad
 SE,Charlottenberg
 SE,Danderyd
 SE,Degerfors
@@ -6250,45 +6057,45 @@ SE,Fagersta
 SE,Falkenberg
 SE,Falsterbo
 SE,Falun
-SE,Färjestaden
 SE,Finspång
 SE,Flen
 SE,Frösön
 SE,Frövi
-SE,Gäddede
+SE,Färjestaden
 SE,Gallivare
 SE,Gamleby
 SE,Gammelstad
-SE,Gävle
 SE,Gislaved
 SE,Gislövs Läge
-SE,Götene
 SE,Gothenburg
 SE,Grebbestad
 SE,Grillby
 SE,Gunnarn
 SE,Gustavsberg
+SE,Gäddede
+SE,Gävle
+SE,Götene
 SE,Hagshult
 SE,Halmstad
 SE,Hammenhög
 SE,Haninge
 SE,Haparanda
-SE,Härnösand
-SE,Hässleholm
 SE,Hedemora
 SE,Helsingborg
 SE,Hemavan
 SE,Hillerstorp
 SE,Hjo
 SE,Hofors
-SE,Höganäs
-SE,Höllviken
 SE,Holmgård
-SE,Höör
 SE,Huddinge
 SE,Hudiksvall
 SE,Hultsfred
 SE,Huskvarna
+SE,Härnösand
+SE,Hässleholm
+SE,Höganäs
+SE,Höllviken
+SE,Höör
 SE,Idvattnet
 SE,Jakobsberg
 SE,Jokkmokk
@@ -6315,8 +6122,8 @@ SE,Kristianstad
 SE,Kristinehamn
 SE,Kullen
 SE,Kumla
-SE,Kungälv
 SE,Kungsbacka
+SE,Kungälv
 SE,Kvikkjokk
 SE,Laholm
 SE,Lainio
@@ -6339,20 +6146,18 @@ SE,Lur
 SE,Lycksele
 SE,Lysekil
 SE,Malexander
-SE,Målilla
 SE,Malmo
 SE,Malung
 SE,Mariestad
-SE,Märsta
-SE,Mölndal
-SE,Mölnlycke
 SE,Mora
 SE,Motala
 SE,Munkedal
 SE,Munkfors
+SE,Märsta
+SE,Målilla
+SE,Mölndal
+SE,Mölnlycke
 SE,Nacka
-SE,Nässjo
-SE,Nödinge
 SE,Nordmaling
 SE,Norrköping
 SE,Norrtälje
@@ -6360,6 +6165,8 @@ SE,Nossebro
 SE,Nybro
 SE,Nyköping
 SE,Nynäshamn
+SE,Nässjo
+SE,Nödinge
 SE,Olofström
 SE,Orebro
 SE,Orminge
@@ -6380,40 +6187,38 @@ SE,Rönninge
 SE,Rörbäcksnäs
 SE,Sala
 SE,Sandviken
-SE,Särna
-SE,Såtenäs
 SE,Sigtuna
 SE,Siljansnäs
 SE,Skara
 SE,Skarsa
 SE,Skelleftea
 SE,Skillingsfors
-SE,Skövde
 SE,Skummeslövsstrand
-SE,Söderhamn
+SE,Skövde
 SE,Soderkoping
-SE,Södertälje
 SE,Solleftea
 SE,Sollentuna
 SE,Solna
-SE,Sölvesborg
-SE,Ställdalen
 SE,Stenungsund
 SE,Stockholm
 SE,Storlien
 SE,Strängnäs
 SE,Strömstad
+SE,Ställdalen
 SE,Sundbyberg
 SE,Sundsvall
 SE,Sunne
 SE,Svanesund
 SE,Sveg
 SE,Svenskär
+SE,Särna
+SE,Såtenäs
+SE,Söderhamn
+SE,Södertälje
+SE,Sölvesborg
 SE,Taby
-SE,Tällberg
 SE,Tanumshede
 SE,Tierp
-SE,Töreboda
 SE,Torsby
 SE,Tranås
 SE,Trelleborg
@@ -6421,6 +6226,8 @@ SE,Trollhättan
 SE,Trosa
 SE,Tvååker
 SE,Tyreso
+SE,Tällberg
+SE,Töreboda
 SE,Uddevalla
 SE,Ulricehamn
 SE,Umea
@@ -6432,17 +6239,17 @@ SE,Vanersborg
 SE,Vansbro
 SE,Varberg
 SE,Varnamo
-SE,Västerås
-SE,Västervik
 SE,Vaxholm
 SE,Vaxjo
-SE,Våxtorp
 SE,Vetlanda
 SE,Vidsel
 SE,Vilhelmina
 SE,Vimmerby
 SE,Vindeln
 SE,Visby
+SE,Västervik
+SE,Västerås
+SE,Våxtorp
 SE,Vörderås
 SE,Ystad
 SG,Bedok
@@ -6516,11 +6323,6 @@ SV,San Miguel
 SV,San Salvador
 SV,Santa Ana
 SV,Tenancingo
-SY,Al Ladhiqiyah
-SY,Aleppo
-SY,Damascus
-SY,Hims
-SY,Qamishly
 TC,Balfour Town
 TG,Atakpame
 TG,Kara
@@ -6636,32 +6438,6 @@ TT,Tunapuna
 TT,Unis
 TT,Upper Fishing Pond
 TT,Upper Manzanilla
-TW,Chia-i Chia-I
-TW,Chu-nan
-TW,Hsin-chu
-TW,Hua-lien
-TW,Kaohsiung County
-TW,Kaohsiung Municipality
-TW,Kaohsiung
-TW,Lung Tang
-TW,P'ing-tung
-TW,Panchiao
-TW,Puli
-TW,T'ai-chung
-TW,Tainan
-TW,Taipei
-TW,Taoyuan
-TW,Yung Kang City
-TZ,Arusha
-TZ,Bagamoyo
-TZ,Dar Es Salaam
-TZ,Dodoma
-TZ,Kilimanjaro
-TZ,Morogoro
-TZ,Mwanza
-TZ,Shinyanga
-TZ,Wete
-TZ,Zanzibar
 UA,Alushta
 UA,Bogodukhov
 UA,Brovary
@@ -6717,8 +6493,8 @@ US,Ann Arbor
 US,Antioch
 US,Apple Valley
 US,Appleton
-US,Arlington Heights
 US,Arlington
+US,Arlington Heights
 US,Arvada
 US,Asheville
 US,Athens-Clarke County
@@ -6789,8 +6565,8 @@ US,Chesapeake
 US,Cheyenne
 US,Chicago
 US,Chico
-US,Chino Hills
 US,Chino
+US,Chino Hills
 US,Chula Vista
 US,Cicero
 US,Cincinnati
@@ -7007,17 +6783,17 @@ US,Merced
 US,Meridian
 US,Mesa
 US,Mesquite
+US,Miami
 US,Miami Beach
 US,Miami Gardens
-US,Miami
 US,Midland
 US,Millcreek
 US,Milpitas
 US,Milwaukee
 US,Minneapolis
 US,Miramar
-US,Mission Viejo
 US,Mission
+US,Mission Viejo
 US,Missoula
 US,Missouri City
 US,Mobile
@@ -7126,8 +6902,8 @@ US,Richmond
 US,Rio Rancho
 US,Riverside
 US,Roanoke
-US,Rochester Hills
 US,Rochester
+US,Rochester Hills
 US,Rock Hill
 US,Rockford
 US,Rocklin
@@ -7153,8 +6929,8 @@ US,San Leandro
 US,San Marcos
 US,San Mateo
 US,San Ramon
-US,Sandy Springs
 US,Sandy
+US,Sandy Springs
 US,Santa Ana
 US,Santa Barbara
 US,Santa Clara
@@ -7183,8 +6959,8 @@ US,South Jordan
 US,South San Francisco
 US,Southfield
 US,Sparks
-US,Spokane Valley
 US,Spokane
+US,Spokane Valley
 US,Springdale
 US,Springfield
 US,St. Charles
@@ -7256,8 +7032,8 @@ US,Westland
 US,Westminster
 US,Weston
 US,Whittier
-US,Wichita Falls
 US,Wichita
+US,Wichita Falls
 US,Wilmington
 US,Winston-Salem
 US,Woodbury
@@ -7287,128 +7063,6 @@ UZ,Samarkand
 UZ,Tashkent
 UZ,Urgench
 VC,Kingstown
-VE,Acarigua
-VE,Achaguas
-VE,Agua Blanca
-VE,Altagracia De Orituco
-VE,Amuay
-VE,Anaco
-VE,Apartaderos
-VE,Araure
-VE,Bachaquero
-VE,Barinas
-VE,Barquisimeto
-VE,Bejuma
-VE,Bocono
-VE,Bruzual
-VE,Cabudare
-VE,Calabozo
-VE,Camatagua
-VE,Capacho
-VE,Caraballeda
-VE,Caracas
-VE,Caripe
-VE,Carora
-VE,Carrizales
-VE,Carupano
-VE,Catia La Mar
-VE,Charallave
-VE,Chivacoa
-VE,Ciudad Ojeda
-VE,Colon
-VE,Coro
-VE,Cua
-VE,Cumarebo
-VE,Ejido
-VE,El Callao
-VE,El Junquito
-VE,El Palito
-VE,El Sombrero
-VE,El Tigrito
-VE,El Tocuyo
-VE,El Vigia
-VE,Elorza
-VE,Guanare
-VE,Guasdualito
-VE,Judibana
-VE,La Asuncion
-VE,La Fria
-VE,La Guaira
-VE,Lagunillas
-VE,Las Morochas
-VE,Las Piedras
-VE,Los Teques
-VE,Machiques
-VE,Macuto
-VE,Maiquetia
-VE,Mantecal
-VE,Maracaibo
-VE,Maracay
-VE,Margarita
-VE,Maturin
-VE,Merida
-VE,Michelena
-VE,Mucuchies
-VE,Ocumare Del Tuy
-VE,Pampatar
-VE,Piedra Azul
-VE,Piritu
-VE,Porlamar
-VE,Puerto Ayacucho
-VE,Puerto Escondido
-VE,Puerto Ordaz
-VE,Puerto Piritu
-VE,Puerto la Cruz
-VE,Puertp Ordaz
-VE,Punta Cardon
-VE,Punta de Mata
-VE,Punta de Piedras
-VE,Punto Fijo
-VE,Quibor
-VE,Rubio
-VE,San Antonio Del Tachira
-VE,San Antonio
-VE,San Carlos
-VE,San Casimiro
-VE,San Cristobal
-VE,San Diego
-VE,San Felipe
-VE,San Felix
-VE,San Fernando de Apure
-VE,San Fernando
-VE,San Juan de Los Morros
-VE,San Mateo
-VE,San Sebastian
-VE,Santa Barbara
-VE,Santa Rita
-VE,Santa Rosa
-VE,Tamare
-VE,Tariba
-VE,Tia Juana
-VE,Tinaquillo
-VE,Tocuyito
-VE,Trujillo
-VE,Tucupita
-VE,Turen
-VE,Turmero
-VE,Upata
-VE,Urena
-VE,Valencia
-VE,Valera
-VE,Valle De La Pascua
-VE,Yaritagua
-VE,Zaraza
-VG,Road Town
-VI,Charlotte Amalie
-VI,Christiansted
-VI,Cruz Bay
-VN,Bien Hoa
-VN,Da Lat
-VN,Da Nang
-VN,Ha Long
-VN,Hanoi
-VN,Ho Chi Minh City
-VN,Hue
 VU,Port Vila
 WF,Hawthorne
 WS,Apia
@@ -7491,115 +7145,3 @@ ZW,Kwekwe
 ZW,Marondera
 ZW,Mutare
 ZW,Victoria Falls
-,Ada
-,Andong
-,Anyang
-,Bandar Seri Begawan
-,Bar
-,Barajevo
-,Belgrade
-,Brazzaville
-,Bucheon City
-,Buchon
-,Budva
-,Castletown
-,Chai Wan
-,Chinju
-,Chongju
-,Chonju
-,Chungju
-,Colonia
-,Douglas
-,Fanling
-,Gaza City
-,Goma
-,Haeundae
-,Hebron
-,Herceg-Novi
-,Hong Kong
-,Inchon
-,Isiro
-,Jagodina
-,Jeju
-,Jerudong
-,Kangnung
-,Kinsasa
-,Kisac
-,Kolasin
-,Kosovo Polje
-,Kowloon
-,Kuala Belait
-,Kula
-,Kunp'o
-,Kunsan
-,Kuso-dong;Pusan-gu
-,Kwangju
-,Kwun Tong
-,Kyongju
-,Leskovac
-,Likasi
-,Lubumbashi
-,Manzini
-,Masan
-,Mbabane
-,McMurdo Station
-,Mindelo
-,Molodesjnaja
-,Nis
-,Novi Sad
-,Obrenovac
-,Ohrid
-,Oranjestad
-,Osan
-,P'yongt'aek
-,P'yongyang
-,Pancevo
-,Peel
-,Philipsburg
-,Podgorica
-,Pohang
-,Pointe Noire
-,Praia
-,Pristina
-,Pusan
-,Pusan-Kuso-2-dong
-,Pyeongtaek
-,Ramsey
-,Reading
-,Saint Paul
-,Saint Peter Port
-,Saint-Denis
-,Sao Tome
-,Senta
-,Seoul
-,Shatin
-,Sheung Shui
-,Skopje
-,Sokch'o
-,Sombor
-,Songnam
-,St Helier
-,Subotica
-,Suwon
-,Taegu
-,Taejon
-,Tai Po
-,Tai Wan
-,Tetovo
-,Tin Shui Wai
-,Tongdu-ch'on
-,Tongduch'on
-,Topola
-,Tseung Kwan O
-,Tsuen Wan
-,Tuen Mun
-,Tutong
-,Uijongbu
-,Ulsan
-,Vatican
-,Veles
-,Vrsac
-,Willemstad
-,Wonju
-,Zemun
-,Zrenjanin

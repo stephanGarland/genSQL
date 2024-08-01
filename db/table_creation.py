@@ -169,7 +169,6 @@ us_state_indices = [
     "CREATE INDEX state_us_name_idx ON state_us (name)",
 ]
 
-# TODO: are these necessary, since everything gets scanned once in bulk into shmem?
 all_indices = (
     city_indices
     + country_indices
@@ -247,7 +246,8 @@ with closing(conn):
             rows,
         )
 
-    with open("./content/zip_code.csv", "r") as f:
+    # the original zip_code.csv had some dupes, like `06340, Groton`
+    with open("./content/zip_code_deduped.csv", "r") as f:
         rows = return_rows(f, ",")
         conn.executemany(
             "INSERT INTO postcode_us (code_post, code_state, city) VALUES (?, ?, ?)",
