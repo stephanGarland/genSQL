@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from array import array
 from datetime import datetime
+from time import gmtime
 from typing import Callable, Iterable, List
 
 from gensql.core.constants import DEFAULT_DATETIME_FMT, DEFAULT_GENERATE_CHUNK_SIZE
@@ -40,16 +41,18 @@ class DateGenerator:
         the dt object with f-strings (e.g. `yr = f"{dt.year:04d}"`)
         is ~20% faster than using strftime. Using the string
         mini-format language as below is ~40% faster.
+        Finally, manually extracting values from the struct
+        instead of using fromtimestamp() shaves off another ~4%.
         """
 
-        dt = datetime.fromtimestamp(epoch)
+        yr, mo, da, hh, mm, ss, _, _, _ = gmtime(epoch)
         return b"%04d-%02d-%02d %02d:%02d:%02d" % (
-            dt.year,
-            dt.month,
-            dt.day,
-            dt.hour,
-            dt.minute,
-            dt.second,
+            yr,
+            mo,
+            da,
+            hh,
+            mm,
+            ss,
         )
 
     def generate(self, num_rows: int) -> Iterable[List]:
