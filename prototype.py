@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 import ctypes
-import multiprocessing as mp
-import os
 import random
 from typing import TYPE_CHECKING, Generator, List
 
@@ -13,6 +11,7 @@ from gensql.generators.email import DomainGenerator, EmailFmt, EmailGenerator
 from gensql.generators.geo import CompositeGeoGenerator
 from gensql.generators.uuid import UUIDGenerator, UUIDVersion
 from gensql.generators.word import WordGenerator
+
 # from gensql.utils.connections import SQLiteColumnGetter
 from gensql.utils.shared_epoch import SharedEpochManager
 from gensql.utils.shuffleable_bytes import ShuffleableBytes
@@ -39,11 +38,10 @@ def load_shuffler() -> ctypes.CDLL:
 def generate_chunk(
     generators: List[Worker], start_row: int, end_row: int, output_file: str
 ) -> None:
-    chunk_size = end_row - start_row
     writer = Writer(f"{output_file}.part{start_row}")
     writer.start()
 
-    for chunk in make_gen(generators, chunk_size):
+    for chunk in make_gen(generators):
         writer.write_chunk(chunk)
 
     writer.end()
@@ -108,19 +106,19 @@ def setup_generators(num_rows: int) -> List[Worker]:
     return [w_uuid, w_dt, w_fname, w_lname, w_email, w_geo]
 
 
-def make_gen(funcs, num_rows: int) -> Generator:
+def make_gen(funcs) -> Generator:
     generators = [func.generate_column() for func in funcs]
     for chunks in zip(*generators):
         yield chunks
 
 
 def generate_data(num_rows: int, output_file: str) -> None:
-    generators = setup_generators(num_rows)
+    workers = setup_generators(num_rows)
     writer = Writer(output_file)
     writer.start()
 
-    for chunk in make_gen(generators, num_rows):
-        writer.write_chunk(chunk)
+    for chunks in make_gen(workers):
+        writer.write_chunk(chunks)
 
     writer.end()
     writer.join()
@@ -134,7 +132,6 @@ if __name__ == "__main__":
     domain_seed = random.getrandbits(32)
     geo_seed = random.getrandbits(32)
 
-    # TODO: why am I getting max_lname etc.? Was it only for ShMem?
     data = sql.get_columns(["first_name"], "person_name")
     f_names = data["first_name"]
     data = sql.get_columns(["last_name"], "person_name")

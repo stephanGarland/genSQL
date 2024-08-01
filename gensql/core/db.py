@@ -1,6 +1,6 @@
 import sqlite3
 from contextlib import closing
-from typing import Dict, List, Tuple, Union
+from typing import Dict, List, Union
 
 from gensql.core.constants import SQLITE_DB
 

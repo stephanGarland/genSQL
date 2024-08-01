@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import random
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Generator, List, Optional
+
+from gensql.core.constants import DEFAULT_GENERATE_CHUNK_SIZE as CHUNK_SIZE
 
 
 class Worker:
@@ -9,10 +11,12 @@ class Worker:
         self,
         generator: Any,
         num_rows: int,
+        chunk_size: int = CHUNK_SIZE,
         seeds: Optional[Dict[str, int]] = None,
         shuffle_lib: Any = None,
     ):
         self.generator = generator
+        self.chunk_size = chunk_size
         self.num_rows = num_rows
         self.seeds = seeds or {"default": random.getrandbits(32)}
         self.shuffle_lib = shuffle_lib
@@ -29,6 +33,10 @@ class Worker:
             for name, seed in self.seeds.items()
         }
 
-    def generate_column(self):
+    def generate_column(self) -> Generator[List[Any], None, None]:
         self.generator.reset_indices()
-        return list(self.generator.generate(self.num_rows))
+        generated = 0
+        while generated < self.num_rows:
+            chunk_size = min(self.chunk_size, self.num_rows - generated)
+            yield from self.generator.generate(chunk_size)
+            generated += chunk_size
