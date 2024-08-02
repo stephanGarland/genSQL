@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Callable, Dict, Generator, Iterable, List, Optional
+from typing import (TYPE_CHECKING, Callable, Dict, Generator, Iterable, List,
+                    Optional)
 
 from gensql.core.constants import DEFAULT_GENERATE_CHUNK_SIZE
 
@@ -60,8 +61,8 @@ class CompositeGeoGenerator:
         generator_name: str = "composite_geo",
     ):
         self.generators = [
-            GeoGenerator(ba, chunk_size, f"{generator_name}_{i}")
-            for i, ba in enumerate(byte_lists)
+            GeoGenerator(bl, chunk_size, f"{generator_name}_{i}")
+            for i, bl in enumerate(byte_lists)
         ]
         self.chunk_size = chunk_size
         self.generator_name = generator_name
