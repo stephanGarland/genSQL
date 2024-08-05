@@ -28,8 +28,8 @@ void uuid_generate_v7(uuid_t out, uint64_t given_time) {
     out[4] = (timestamp >> 8) & 0xFF;
     out[5] = timestamp & 0xFF;
 
+    arc4random_buf(out + 6, 10);
     out[6] = (out[6] & 0x0F) | 0x70;
-    arc4random_buf(out + 7, 9);
     out[8] = (out[8] & 0x3F) | 0x80;
 }
 
