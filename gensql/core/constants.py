@@ -23,10 +23,16 @@ ALLOWED_COLS = [
 ALLOWED_UNIQUES = ["email"]
 
 DEFAULT_DATETIME_FMT = "%Y-%m-%d %H:%M:%S"
+DEFAULT_DATETIME_FMT_STRFMT = b"%04d-%02d-%02d %02d:%02d:%02d"
 DEFAULT_GENERATE_CHUNK_SIZE = 100_000
 DEFAULT_INSERT_CHUNK_SIZE = 10_000
 DEFAULT_MAX_FIELD_PCT = 0.15
 DEFAULT_NUM_ROWS = 1_000
+
+ID_FORMATS = {
+    "SSN": (b"%03d-%02d-%04d", (1_000_000, 10_000), (100, 10_000)),
+    "PHONE_US": (b"%03d-%03d-%04d", (1_000_000, 1_000), (1_000, 10_000)),
+}
 
 JSON_DEFAULT_KEYS = [f"{x}_key" for x in ascii_lowercase][::-1]
 JSON_OBJ_MAX_KEYS = 3
@@ -70,11 +76,6 @@ PHONE_NUMBERS = {
     "us": lambda x: f"+1 {x[0:3]}-{x[3:6]}-{x[6:10]}",
 }
 
-
-def SSNS(x):
-    return f"{x[0:3]}-{x[3:5]}-{x[6:11]}"
-
-
 SQLITE_DB = "./db/gensql.db"
 
 SH_MEM_NAME_FNAME = "SHM_FNAME"
@@ -84,3 +85,5 @@ SH_MEM_NAME_WORD = "SHM_WORD"
 SH_MEM_SZ = 1 * (1 << 20)
 
 THREADING_BUFFER_SIZE = 10_000
+
+UUID_STR_LEN = 36

@@ -9,7 +9,7 @@
 
 #define MSEC_PER_SEC 1000
 #define USEC_PER_MSEC 1000
-#define UUID_STR_LEN 37
+#define UUID_STR_LEN 36
 
 void uuid_generate_v7(uuid_t out, uint64_t given_time) {
     uint64_t timestamp = 0;
