@@ -52,9 +52,11 @@ build:
 		echo "On openSUSE, use: sudo zypper install libbsd-devel"; \
 	fi
 	$(CC) $(CFLAGS) $(SRC_DIR)/fast_shuffle.c -o $(BIN_DIR)/fast_shuffle.so
-	$(CC) $(CFLAGS) $(SRC_DIR)/fast_mod.c -o $(BIN_DIR)/fast_mod.so
+	$(CC) $(CFLAGS) $(SRC_DIR)/fast_div.c -o $(BIN_DIR)/fast_div.so
+	$(CC) $(CFLAGS) $(SRC_DIR)/phone.c -o $(BIN_DIR)/phone.so
 	$(CC) $(CFLAGS) $(SRC_DIR)/uuid.c -L$(LDFLAGS) $(LDLIBS) -o $(BIN_DIR)/uuid.so $(LDSTATICLIBS)
 	$(CC) $(CFLAGS) $(SRC_DIR)/xoshiro.c -o $(BIN_DIR)/xoshiro.so
 
 clean:
+	rm -f $(BIN_DIR)/*.so
 	rm -f $(BIN_DIR)/**/*.so
