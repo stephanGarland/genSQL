@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import ctypes
 from enum import Enum
-from typing import Callable, Dict, Iterable, List
+from typing import Callable, Dict, Iterable, List, Tuple
 
 from gensql.core.constants import DEFAULT_GENERATE_CHUNK_SIZE, UUID_STR_LEN
 from gensql.lib.wrapper.uuid import get_lib as uuidgen
@@ -47,7 +47,7 @@ class UUIDGenerator:
         uuid_array = ctypes.cast(
             arr_ptr, ctypes.POINTER(ctypes.c_char * (UUID_STR_LEN * chunk_size))
         )
-        uuids: List[List[bytes]] = [
+        uuids: List[Tuple[List[bytes]]] = [
             (uuid_array.contents[i * UUID_STR_LEN : (i + 1) * UUID_STR_LEN],)
             for i in range(chunk_size)
         ]

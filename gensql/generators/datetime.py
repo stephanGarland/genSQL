@@ -5,7 +5,11 @@ from datetime import datetime
 from time import gmtime
 from typing import Callable, Iterable, List
 
-from gensql.core.constants import DEFAULT_DATETIME_FMT, DEFAULT_GENERATE_CHUNK_SIZE
+from gensql.core.constants import (
+    DEFAULT_DATETIME_FMT,
+    DEFAULT_DATETIME_FMT_STRFMT,
+    DEFAULT_GENERATE_CHUNK_SIZE,
+)
 from gensql.lib.wrapper.xoshiro import get_lib as xoshiro
 from gensql.utils.shared_epoch import SharedEpochManager
 
@@ -46,7 +50,7 @@ class DateGenerator:
         """
 
         yr, mo, da, hh, mm, ss, _, _, _ = gmtime(epoch)
-        return b"%04d-%02d-%02d %02d:%02d:%02d" % (
+        return DEFAULT_DATETIME_FMT_STRFMT % (
             yr,
             mo,
             da,

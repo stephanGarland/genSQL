@@ -60,12 +60,16 @@ class EmailFmt:
 
 
 class EmailFmtDefSection:
+    __slots__ = ["name", "length"]
+
     def __init__(self, name: str, length: int):
         self.name = name
         self.length = length
 
 
 class EmailFmtDef:
+    __slots__ = ["local_separator", "sections"]
+
     def __init__(
         self, local_separator: str, sections: List[Optional[EmailFmtDefSection]]
     ):
