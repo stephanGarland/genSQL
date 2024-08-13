@@ -10,7 +10,10 @@ class SQLiteColumnGetter:
         self.conn = sqlite3.connect(SQLITE_DB)
 
     def get_columns(
-        self, columns: Union[str, List[str]], table: str, join_clause: str = ""
+        self,
+        columns: Union[str, List[str]],
+        table: str,
+        join_clause: List[str] = list(),
     ) -> Dict[str, List[str]]:
         """Retrieves specified columns from a given table in the embedded DB.
 
@@ -30,7 +33,7 @@ class SQLiteColumnGetter:
 
         column_str = ", ".join(columns)
 
-        query = f"SELECT {column_str} FROM {table} {join_clause}"
+        query = f"SELECT {column_str} FROM {table} {' '.join(join_clause)}"
 
         try:
             with closing(self.conn.cursor()) as cur:
