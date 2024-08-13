@@ -20,6 +20,7 @@ static uint64_t next(void) {
     return result;
 }
 
+/* TODO: custom seed */
 void seed_rng() {
     srand(time(NULL));
     for (int i = 0; i < 4; i++) {
@@ -27,17 +28,17 @@ void seed_rng() {
     }
 }
 
-uint32_t* fill_array(uint32_t count, uint32_t min_value, uint32_t max_value) {
+uint64_t* fill_array(uint32_t count, uint64_t min_value, uint64_t max_value) {
     if (min_value >= max_value) {
         return NULL;
     }
 
-    uint32_t* arr = calloc(count, sizeof(uint32_t));
+    uint64_t* arr = calloc(count, sizeof(uint64_t));
     if (arr == NULL) {
         return NULL;
     }
 
-    uint64_t range = (uint64_t)max_value - min_value + 1;
+    uint64_t range = max_value - min_value + 1;
 
     for (uint32_t i = 0; i < count; i++) {
         uint64_t rand_val = next();
@@ -47,6 +48,6 @@ uint32_t* fill_array(uint32_t count, uint32_t min_value, uint32_t max_value) {
     return arr;
 }
 
-void free_array(uint32_t* arr) {
+void free_array(uint64_t* arr) {
     free(arr);
 }
