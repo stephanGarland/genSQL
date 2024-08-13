@@ -7,7 +7,7 @@ conn = sqlite3.connect("db/gensql.db", isolation_level=None)
 
 name_create = """
 CREATE TABLE IF NOT EXISTS person_name (
-  id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  id INTEGER NOT NULL PRIMARY KEY,
   first_name TEXT NOT NULL,
   last_name TEXT NOT NULL
 ) STRICT;
@@ -15,14 +15,14 @@ CREATE TABLE IF NOT EXISTS person_name (
 
 lorem_create = """
 CREATE TABLE IF NOT EXISTS lorem (
-  id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  id INTEGER NOT NULL PRIMARY KEY,
   paragraph TEXT NOT NULL
 ) STRICT;
 """
 
 word_create = """
 CREATE TABLE IF NOT EXISTS word (
-  id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  id INTEGER NOT NULL PRIMARY KEY,
   word TEXT NOT NULL
 ) STRICT;
 """
@@ -99,12 +99,21 @@ CREATE TABLE IF NOT EXISTS postcode (
 
 postcode_us_create = """
 CREATE TABLE IF NOT EXISTS postcode_us (
-  id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  id INTEGER NOT NULL PRIMARY KEY,
   code_post TEXT NOT NULL,
   code_state TEXT NOT NULL,
   city TEXT NOT NULL,
   CONSTRAINT postcode_us_code_state_us_code_state
     FOREIGN KEY (code_state) REFERENCES state_us (code_state)
+) STRICT;
+"""
+
+areacode_create = """
+CREATE TABLE IF NOT EXISTS areacode (
+    id INTEGER NOT NULL PRIMARY KEY,
+    code_area INTEGER NOT NULL,
+    code_country TEXT NOT NULL,
+    code_subdivision TEXT NOT NULL
 ) STRICT;
 """
 
@@ -123,7 +132,7 @@ CREATE TABLE IF NOT EXISTS city (
 
 fips_create = """
 CREATE TABLE IF NOT EXISTS fips (
-  id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  id INTEGER NOT NULL PRIMARY KEY,
   code_state TEXT NOT NULL,
   code_county TEXT NULL,
   code_subdiv TEXT NULL,
@@ -199,6 +208,7 @@ with closing(conn):
     conn.execute(postcode_us_create)
     conn.execute(fips_create)
     conn.execute(province_create)
+    conn.execute(areacode_create)
     conn.execute("COMMIT")
     conn.execute("PRAGMA foreign_keys = ON")
     conn.execute("BEGIN")
@@ -258,6 +268,13 @@ with closing(conn):
         rows = return_rows(f, ",")
         conn.executemany(
             "INSERT INTO postcode_us (code_post, code_state, city) VALUES (?, ?, ?)",
+            rows,
+        )
+
+    with open("./content/area_code.csv", "r") as f:
+        rows = return_rows(f, ",")
+        conn.executemany(
+            "INSERT INTO areacode (code_area, code_country, code_subdivision) VALUES (?, ?, ?)",
             rows,
         )
 
